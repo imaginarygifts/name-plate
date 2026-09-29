@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Imaginary Gifts — Catalogue</title>
+<link rel="stylesheet" href="/css/catalogue.css">
+</head>
+<body>
+<header class="header">
+  <a class="logo" href="/">Imaginary Gifts</a>
+  <a class="admin-link" href="/admin/">Admin</a>
+</header>
+<main class="container">
+  <div id="loading" class="loading">Loading catalogue…</div>
+  <div id="catalogues"></div>
+</main>
+<div id="lightbox" class="lightbox hidden">
+  <button id="close" class="close">×</button>
+  <button id="prev" class="nav prev">‹</button>
+  <img id="lightboxImg" alt="">
+  <button id="next" class="nav next">›</button>
+  <div class="lightbox-info">
+    <strong id="lightboxName"></strong>
+    <span id="lightboxMeta"></span>
+    <button id="orderBtn" class="order">Order Now</button>
+  </div>
+</div>
+<script src="/js/catalogue.js"></script>
+</body>
+</html>
