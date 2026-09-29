@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Catalogue Admin</title><link rel="stylesheet" href="/admin/admin.css"></head>
+<body>
+<header><strong>Catalogue Manager</strong><button id="logout" class="secondary">Logout</button></header>
+<main id="app">
+<section id="loginBox" class="card">
+<h1>Admin Login</h1>
+<input id="email" type="email" placeholder="Admin email">
+<input id="password" type="password" placeholder="Password">
+<button id="login" class="primary">Login</button>
+<p id="loginMsg"></p>
+<hr>
+<h3>First-time setup</h3>
+<p class="muted">Use this only before the first admin account exists.</p>
+<input id="setupKey" placeholder="Setup key from wrangler.jsonc">
+<input id="setupEmail" type="email" placeholder="New admin email">
+<input id="setupPassword" type="password" placeholder="New admin password (8+ characters)">
+<button id="setup" class="secondary">Create first admin</button>
+<p id="setupMsg"></p>
+</section>
+<section id="adminBox" class="hidden">
+<div class="card">
+<h2>Add / Edit Catalogue</h2>
+<input id="catId" type="hidden">
+<input id="catName" placeholder="Catalogue name">
+<textarea id="catDesc" placeholder="Description"></textarea>
+<input id="catOrder" type="number" value="0" placeholder="Display order">
+<label><input id="catActive" type="checkbox" checked> Show on frontend</label>
+<h3>Colours</h3>
+<div id="colours"></div><button id="addColour" class="secondary">+ Colour</button>
+<h3>Sizes & Prices</h3>
+<div id="sizes"></div><button id="addSize" class="secondary">+ Size</button>
+<h3>Catalogue Images</h3>
+<div id="imageUploadArea" class="item">
+  <input id="imageFile" type="file" accept="image/*">
+  <select id="imageProduct"><option value="">Link to product (optional)</option></select>
+  <input id="imageColour" placeholder="Colour (optional)">
+  <input id="imageAlt" placeholder="Alt text">
+  <button id="uploadImage" class="secondary">Upload image</button>
+  <div id="imageList"></div>
+</div>
+<button id="saveCat" class="primary">Save Catalogue</button>
+<button id="newCat" class="secondary">New</button>
+</div>
+<div class="card"><h2>Catalogues</h2><div id="catList"></div></div>
+</section>
+</main>
+<script src="/admin/admin.js"></script>
+</body></html>
