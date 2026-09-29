@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "imaginary-gifts-catalogue",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-30",
+  "assets": {
+    "directory": "./public"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "imaginary-gifts-db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "imaginary-gifts-media"
+    }
+  ],
+  "vars": {
+    "SETUP_KEY": "CHANGE_THIS_BEFORE_DEPLOY"
+  }
+}
