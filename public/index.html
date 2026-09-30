@@ -1,346 +1,770 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-  <meta charset="UTF-8">
+<title>Imaginary Gifts Admin</title>
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>Catalogue</title>
-
-  <link
-    rel="stylesheet"
-    href="/css/catalogue.css"
-  >
-
+<link rel="stylesheet" href="/admin/admin.css">
 </head>
 
 <body>
 
+<header class="admin-header">
 
-<!-- ================= TOP BAR ================= -->
+    <div>
+        <h1>Imaginary Gifts</h1>
+        <p>Product Administration</p>
+    </div>
 
-<header class="topbar">
+    <div class="header-actions">
 
-  <div class="shop-name" id="shopName">
-    YOUR NAME
-  </div>
+        <span id="adminEmail" class="admin-email"></span>
+
+        <button
+            id="logoutButton"
+            class="secondary-btn"
+        >
+            Logout
+        </button>
+
+    </div>
 
 </header>
 
 
-
-<!-- ================= PRODUCT PAGE ================= -->
-
-<main class="product-page">
+<main class="admin-layout">
 
 
-  <!-- PRODUCT TITLE -->
+<!-- ==================================================
+     LOGIN
+================================================== -->
 
-  <section class="product-header">
+<section id="loginBox" class="auth-card">
 
-    <h1 id="productName">
-      Loading...
-    </h1>
+    <h2>Admin Login</h2>
 
-    <div
-      id="productPrice"
-      class="product-price"
+    <p class="muted">
+        Login to manage your products.
+    </p>
+
+    <form id="loginForm">
+
+        <div class="field">
+
+            <label>Email</label>
+
+            <input
+                id="loginEmail"
+                type="email"
+                placeholder="admin@example.com"
+                required
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>Password</label>
+
+            <input
+                id="loginPassword"
+                type="password"
+                placeholder="Password"
+                required
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="gradient-btn full-btn"
+        >
+            Login
+        </button>
+
+    </form>
+
+
+    <div id="loginMessage" class="message"></div>
+
+
+    <button
+        id="showRegisterButton"
+        type="button"
+        class="text-btn"
     >
-      ₹0
+        New User
+    </button>
+
+</section>
+
+
+
+<!-- ==================================================
+     REGISTER
+================================================== -->
+
+<section
+    id="registerBox"
+    class="auth-card hidden"
+>
+
+    <h2>Create Admin User</h2>
+
+    <p class="muted">
+        Create a new admin account.
+    </p>
+
+
+    <form id="registerForm">
+
+        <div class="field">
+
+            <label>Email</label>
+
+            <input
+                id="registerEmail"
+                type="email"
+                placeholder="admin@example.com"
+                required
+            >
+
+        </div>
+
+
+        <div class="field">
+
+            <label>Password</label>
+
+            <input
+                id="registerPassword"
+                type="password"
+                minlength="8"
+                placeholder="Minimum 8 characters"
+                required
+            >
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="gradient-btn full-btn"
+        >
+            Create User
+        </button>
+
+    </form>
+
+
+    <div id="registerMessage" class="message"></div>
+
+
+    <button
+        id="backLoginButton"
+        type="button"
+        class="text-btn"
+    >
+        ← Back to Login
+    </button>
+
+</section>
+
+
+
+<!-- ==================================================
+     ADMIN AREA
+================================================== -->
+
+<section
+    id="adminBox"
+    class="admin-content hidden"
+>
+
+
+<!-- ==================================================
+     PRODUCT EDITOR
+================================================== -->
+
+<div class="editor-card">
+
+    <div class="card-title-row">
+
+        <div>
+
+            <h2 id="formTitle">
+                Add Product
+            </h2>
+
+            <p class="muted">
+                Create or edit your product.
+            </p>
+
+        </div>
+
+
+        <button
+            id="newProductButton"
+            type="button"
+            class="secondary-btn"
+        >
+            + New Product
+        </button>
+
     </div>
 
-  </section>
+
+<form id="productForm">
 
 
+<input
+    id="productId"
+    type="hidden"
+>
 
-  <!-- ================= COLOUR ================= -->
 
-  <section
-    id="colourSection"
-    class="variant-section hidden"
-  >
+<!-- ==================================================
+     BASIC PRODUCT
+================================================== -->
 
-    <div class="variant-title">
-      Colour
+<div class="section-block">
+
+    <div class="section-title">
+
+        <h3>Basic Information</h3>
+
     </div>
 
-    <div
-      id="colourList"
-      class="variant-scroll"
-    ></div>
 
-  </section>
+    <div class="field">
 
+        <label>
+            Product Name *
+        </label>
 
+        <input
+            id="productName"
+            type="text"
+            placeholder="Acrylic Glossy Name Plate"
+            required
+        >
 
-  <!-- ================= SIZE ================= -->
-
-  <section
-    id="sizeSection"
-    class="variant-section hidden"
-  >
-
-    <div class="variant-title">
-      Size
     </div>
 
+
+    <div class="field">
+
+        <label>
+            Base Price (₹) *
+        </label>
+
+        <input
+            id="productPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="1000"
+            required
+        >
+
+    </div>
+
+
+    <div class="field">
+
+        <label>
+            Description
+        </label>
+
+        <textarea
+            id="productDescription"
+            rows="4"
+            placeholder="Product description..."
+        ></textarea>
+
+    </div>
+
+
+    <!-- CATEGORY -->
+
+    <div class="field">
+
+        <label>
+            Category *
+        </label>
+
+
+        <div class="category-select-row">
+
+            <select id="productCategory">
+
+                <option value="">
+                    Select Category
+                </option>
+
+            </select>
+
+
+            <button
+                id="createCategoryButton"
+                type="button"
+                class="secondary-btn"
+            >
+                + Create Category
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <div class="two-column">
+
+        <label class="checkbox-row">
+
+            <input
+                id="productActive"
+                type="checkbox"
+                checked
+            >
+
+            <span>
+                Show on Frontend
+            </span>
+
+        </label>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     COLOURS
+================================================== -->
+
+<div class="section-block">
+
+    <div class="section-title">
+
+        <div>
+
+            <h3>Colours</h3>
+
+            <p class="muted">
+                Colour options with additional price.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div id="colourList"></div>
+
+
+    <button
+        id="addColourButton"
+        type="button"
+        class="secondary-btn add-btn"
+    >
+        + Add Colour
+    </button>
+
+</div>
+
+
+
+<!-- ==================================================
+     SIZES
+================================================== -->
+
+<div class="section-block">
+
+    <div class="section-title">
+
+        <div>
+
+            <h3>Sizes</h3>
+
+            <p class="muted">
+                Size options with additional price.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div id="sizeList"></div>
+
+
+    <button
+        id="addSizeButton"
+        type="button"
+        class="secondary-btn add-btn"
+    >
+        + Add Size
+    </button>
+
+</div>
+
+
+
+<!-- ==================================================
+     CUSTOM VARIANTS
+================================================== -->
+
+<div class="section-block">
+
+    <div class="section-title">
+
+        <div>
+
+            <h3>Custom Variants</h3>
+
+            <p class="muted">
+                Create any type of variant you want.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div class="variant-help">
+
+        Examples:
+        <b>Design</b>,
+        <b>Shape</b>,
+        <b>Brand</b>,
+        <b>Thickness</b>,
+        <b>Material</b>,
+        <b>Finish</b>,
+        etc.
+
+    </div>
+
+
+    <div id="variantList"></div>
+
+
+    <button
+        id="addVariantButton"
+        type="button"
+        class="gradient-btn add-btn"
+    >
+        + Create Variant
+    </button>
+
+</div>
+
+
+
+<!-- ==================================================
+     IMAGES
+================================================== -->
+
+<div class="section-block">
+
+    <div class="section-title">
+
+        <div>
+
+            <h3>Product Images</h3>
+
+            <p class="muted">
+                Add multiple product images.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <label class="image-upload-box">
+
+        <input
+            id="productImages"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+            multiple
+            hidden
+        >
+
+        <span class="upload-icon">
+            +
+        </span>
+
+        <strong>
+            Select Product Images
+        </strong>
+
+        <small>
+            JPG, PNG, WEBP, GIF or AVIF
+        </small>
+
+    </label>
+
+
     <div
-      id="sizeList"
-      class="variant-scroll"
+        id="imagePreview"
+        class="image-preview-grid"
     ></div>
 
-  </section>
+</div>
 
 
 
-  <!-- ================= IMAGES ================= -->
+<!-- ==================================================
+     SAVE
+================================================== -->
 
-  <section class="images-section">
+<div class="form-actions">
+
+    <button
+        id="saveProductButton"
+        type="submit"
+        class="gradient-btn large-btn"
+    >
+        Save Product
+    </button>
+
+
+    <button
+        id="cancelEditButton"
+        type="button"
+        class="secondary-btn large-btn"
+    >
+        Cancel
+    </button>
+
+</div>
+
+
+</form>
+
+</div>
+
+
+
+<!-- ==================================================
+     ALL PRODUCTS
+================================================== -->
+
+<div class="list-card">
+
+    <div class="card-title-row">
+
+        <div>
+
+            <h2>All Products</h2>
+
+            <p class="muted">
+                Edit, duplicate or delete products.
+            </p>
+
+        </div>
+
+
+        <span
+            id="productCount"
+            class="count-badge"
+        >
+            0
+        </span>
+
+    </div>
+
 
     <div
-      id="imageGrid"
-      class="image-grid"
+        id="productList"
+        class="product-list"
     ></div>
 
-  </section>
+</div>
 
+
+</section>
 
 </main>
 
 
 
-<!-- ================= IMAGE VIEWER ================= -->
+<!-- ==================================================
+     CATEGORY MODAL
+================================================== -->
 
 <div
-  id="imageViewer"
-  class="image-viewer hidden"
+    id="categoryModal"
+    class="modal hidden"
 >
 
-  <div class="viewer-top">
+    <div class="modal-card small-modal">
 
-    <button
-      id="closeViewer"
-      class="viewer-close"
-    >
-      ×
-    </button>
+        <div class="modal-header">
 
-    <div
-      id="viewerCounter"
-      class="viewer-counter"
-    >
-      1 / 1
-    </div>
+            <h3>Create Category</h3>
 
-  </div>
+            <button
+                id="closeCategoryModal"
+                class="modal-close"
+            >
+                ×
+            </button>
 
-
-
-  <div
-    id="viewerImages"
-    class="viewer-images"
-  ></div>
-
-
-
-  <!-- VIEWER BOTTOM -->
-
-  <div class="viewer-bottom">
-
-
-    <div class="viewer-variants">
-
-
-      <!-- COLOUR -->
-
-      <div
-        id="viewerColourSection"
-        class="viewer-variant-section hidden"
-      >
-
-        <div class="viewer-label">
-          Colour
         </div>
 
-        <div
-          id="viewerColours"
-          class="viewer-variant-scroll"
-        ></div>
 
-      </div>
+        <div class="field">
 
+            <label>
+                Category Name
+            </label>
 
+            <input
+                id="newCategoryName"
+                placeholder="Name Plates"
+            >
 
-      <!-- SIZE -->
-
-      <div
-        id="viewerSizeSection"
-        class="viewer-variant-section hidden"
-      >
-
-        <div class="viewer-label">
-          Size
         </div>
 
+
         <div
-          id="viewerSizes"
-          class="viewer-variant-scroll"
+            id="categoryMessage"
+            class="message"
         ></div>
 
-      </div>
 
+        <div class="modal-actions">
+
+            <button
+                id="cancelCategoryButton"
+                class="secondary-btn"
+                type="button"
+            >
+                Cancel
+            </button>
+
+            <button
+                id="saveCategoryButton"
+                class="gradient-btn"
+                type="button"
+            >
+                Create Category
+            </button>
+
+        </div>
 
     </div>
-
-
-
-    <!-- PRICE -->
-
-    <div
-      id="viewerPrice"
-      class="viewer-price"
-    >
-      ₹0
-    </div>
-
-
-
-    <button
-      id="orderButton"
-      class="order-button"
-    >
-      Order Now
-    </button>
-
-
-  </div>
 
 </div>
 
 
 
-<!-- ================= ORDER FORM ================= -->
+<!-- ==================================================
+     IMAGE UPLOAD PROGRESS
+================================================== -->
 
 <div
-  id="orderModal"
-  class="order-modal hidden"
+    id="uploadModal"
+    class="modal hidden"
 >
 
-  <div class="order-card">
+    <div class="modal-card upload-modal">
+
+        <div class="upload-modal-icon">
+            ↑
+        </div>
 
 
-    <button
-      id="closeOrder"
-      class="order-close"
-    >
-      ×
-    </button>
+        <h2>
+            Uploading Images
+        </h2>
 
 
-    <h2>
-      Place Order
-    </h2>
+        <p
+            id="uploadCurrentText"
+            class="muted"
+        >
+            Preparing...
+        </p>
 
 
-    <p class="order-product">
-      <span id="orderProductName"></span>
-    </p>
+        <div class="progress-number">
+
+            <span id="uploadImageNumber">
+                0 / 0
+            </span>
+
+            <strong id="uploadPercent">
+                0%
+            </strong>
+
+        </div>
 
 
+        <div class="progress-track">
 
-    <!-- NAME -->
+            <div
+                id="uploadProgress"
+                class="progress-bar"
+            ></div>
 
-    <input
-      id="customerName"
-      type="text"
-      placeholder="Your Name"
-      autocomplete="name"
-    >
-
+        </div>
 
 
-    <!-- NUMBER -->
-
-    <input
-      id="customerPhone"
-      type="tel"
-      placeholder="Mobile Number"
-      autocomplete="tel"
-    >
+        <p
+            id="uploadFileName"
+            class="upload-file-name"
+        >
+            Waiting...
+        </p>
 
 
-
-    <!-- ADDRESS -->
-
-    <textarea
-      id="customerAddress"
-      placeholder="Complete Address"
-      rows="4"
-    ></textarea>
-
-
-
-    <!-- PINCODE -->
-
-    <input
-      id="customerPincode"
-      type="text"
-      inputmode="numeric"
-      maxlength="6"
-      placeholder="Pincode"
-      autocomplete="postal-code"
-    >
-
-
-
-    <!-- SUMMARY -->
-
-    <div class="order-summary">
-
-      <div>
-        <span>Colour</span>
-        <strong id="orderColour">-</strong>
-      </div>
-
-      <div>
-        <span>Size</span>
-        <strong id="orderSize">-</strong>
-      </div>
-
-      <div class="summary-total">
-        <span>Total</span>
-        <strong id="orderPrice">₹0</strong>
-      </div>
+        <div
+            id="uploadStatus"
+            class="upload-status"
+        ></div>
 
     </div>
-
-
-
-    <button
-      id="confirmOrder"
-      class="confirm-order"
-    >
-      Order on WhatsApp
-    </button>
-
-
-    <div
-      id="orderMessage"
-      class="order-message"
-    ></div>
-
-
-  </div>
 
 </div>
 
 
 
-<script src="/js/catalogue.js"></script>
+<!-- ==================================================
+     GENERAL LOADING
+================================================== -->
+
+<div
+    id="loadingOverlay"
+    class="loading-overlay hidden"
+>
+
+    <div class="loader"></div>
+
+    <strong id="loadingText">
+        Loading...
+    </strong>
+
+</div>
+
+
+
+<div
+    id="toast"
+    class="toast"
+></div>
+
+
+
+<script src="/admin/admin.js"></script>
 
 </body>
 </html>
