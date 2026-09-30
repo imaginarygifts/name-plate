@@ -1,50 +1,282 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Catalogue Admin</title><link rel="stylesheet" href="/admin/admin.css"></head>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Catalogue Admin</title>
+
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+
 <body>
-<header><strong>Catalogue Manager</strong><button id="logout" class="secondary">Logout</button></header>
-<main id="app">
-<section id="loginBox" class="card">
-<h1>Admin Login</h1>
-<input id="email" type="email" placeholder="Admin email">
-<input id="password" type="password" placeholder="Password">
-<button id="login" class="primary">Login</button>
-<p id="loginMsg"></p>
-<hr>
-<h3>First-time setup</h3>
-<p class="muted">Use this only before the first admin account exists.</p>
-<input id="setupKey" placeholder="Setup key from wrangler.jsonc">
-<input id="setupEmail" type="email" placeholder="New admin email">
-<input id="setupPassword" type="password" placeholder="New admin password (8+ characters)">
-<button id="setup" class="secondary">Create first admin</button>
-<p id="setupMsg"></p>
-</section>
-<section id="adminBox" class="hidden">
-<div class="card">
-<h2>Add / Edit Catalogue</h2>
-<input id="catId" type="hidden">
-<input id="catName" placeholder="Catalogue name">
-<textarea id="catDesc" placeholder="Description"></textarea>
-<input id="catOrder" type="number" value="0" placeholder="Display order">
-<label><input id="catActive" type="checkbox" checked> Show on frontend</label>
-<h3>Colours</h3>
-<div id="colours"></div><button id="addColour" class="secondary">+ Colour</button>
-<h3>Sizes & Prices</h3>
-<div id="sizes"></div><button id="addSize" class="secondary">+ Size</button>
-<h3>Catalogue Images</h3>
-<div id="imageUploadArea" class="item">
-  <input id="imageFile" type="file" accept="image/*">
-  <select id="imageProduct"><option value="">Link to product (optional)</option></select>
-  <input id="imageColour" placeholder="Colour (optional)">
-  <input id="imageAlt" placeholder="Alt text">
-  <button id="uploadImage" class="secondary">Upload image</button>
-  <div id="imageList"></div>
-</div>
-<button id="saveCat" class="primary">Save Catalogue</button>
-<button id="newCat" class="secondary">New</button>
-</div>
-<div class="card"><h2>Catalogues</h2><div id="catList"></div></div>
-</section>
+
+<header class="topbar">
+  <div class="brand">
+    <span>Imaginary Gifts</span>
+    <small>Catalogue Admin</small>
+  </div>
+
+  <button id="logoutBtn" class="logout-btn hidden">
+    Logout
+  </button>
+</header>
+
+
+<!-- ================= LOGIN ================= -->
+
+<main id="loginPage" class="auth-page">
+
+  <div class="auth-card">
+
+    <div class="auth-logo">
+      IG
+    </div>
+
+    <h1 id="authTitle">Admin Login</h1>
+
+    <p id="authSubtitle">
+      Login to manage your products
+    </p>
+
+
+    <!-- LOGIN FORM -->
+
+    <div id="loginForm">
+
+      <input
+        id="loginEmail"
+        type="email"
+        placeholder="Email"
+        autocomplete="email"
+      >
+
+      <input
+        id="loginPassword"
+        type="password"
+        placeholder="Password"
+        autocomplete="current-password"
+      >
+
+      <button id="loginBtn" class="primary-btn">
+        Login
+      </button>
+
+      <button id="showRegisterBtn" class="link-btn">
+        New User
+      </button>
+
+      <div id="loginMessage" class="message"></div>
+
+    </div>
+
+
+    <!-- NEW USER FORM -->
+
+    <div id="registerForm" class="hidden">
+
+      <input
+        id="registerEmail"
+        type="email"
+        placeholder="Email"
+        autocomplete="email"
+      >
+
+      <input
+        id="registerPassword"
+        type="password"
+        placeholder="Password"
+        autocomplete="new-password"
+      >
+
+      <input
+        id="registerPassword2"
+        type="password"
+        placeholder="Confirm Password"
+        autocomplete="new-password"
+      >
+
+      <button id="registerBtn" class="primary-btn">
+        Create User
+      </button>
+
+      <button id="showLoginBtn" class="link-btn">
+        Back to Login
+      </button>
+
+      <div id="registerMessage" class="message"></div>
+
+    </div>
+
+  </div>
+
 </main>
+
+
+<!-- ================= ADMIN ================= -->
+
+<main id="adminPage" class="admin-page hidden">
+
+
+  <!-- PRODUCT FORM -->
+
+  <section class="admin-card">
+
+    <div class="section-title">
+      <div>
+        <h2 id="productFormTitle">Add Product</h2>
+        <p>Create or edit your product</p>
+      </div>
+    </div>
+
+
+    <input id="productId" type="hidden">
+
+
+    <!-- PRODUCT NAME -->
+
+    <label>
+      Product Name
+    </label>
+
+    <input
+      id="productName"
+      type="text"
+      placeholder="Example: Personalized Name Plate"
+    >
+
+
+    <!-- BASE PRICE -->
+
+    <label>
+      Price
+    </label>
+
+    <input
+      id="productPrice"
+      type="number"
+      min="0"
+      step="0.01"
+      placeholder="499"
+    >
+
+
+    <!-- COLOURS -->
+
+    <div class="field-header">
+
+      <h3>Colours</h3>
+
+      <button id="addColourBtn" class="small-btn">
+        + Add Colour
+      </button>
+
+    </div>
+
+    <div id="colourList"></div>
+
+
+    <!-- SIZES -->
+
+    <div class="field-header">
+
+      <h3>Sizes</h3>
+
+      <button id="addSizeBtn" class="small-btn">
+        + Add Size
+      </button>
+
+    </div>
+
+    <div id="sizeList"></div>
+
+
+    <!-- IMAGES -->
+
+    <div class="field-header">
+
+      <h3>Product Images</h3>
+
+    </div>
+
+    <input
+      id="productImages"
+      type="file"
+      accept="image/*"
+      multiple
+    >
+
+    <div id="imagePreview" class="image-preview"></div>
+
+
+    <!-- SHOW FRONTEND -->
+
+    <label class="checkbox-row">
+
+      <input
+        id="productActive"
+        type="checkbox"
+        checked
+      >
+
+      <span>
+        Show on Frontend
+      </span>
+
+    </label>
+
+
+    <!-- SAVE -->
+
+    <div class="form-buttons">
+
+      <button id="saveProductBtn" class="primary-btn">
+        Save Product
+      </button>
+
+      <button id="cancelEditBtn" class="secondary-btn hidden">
+        Cancel Edit
+      </button>
+
+    </div>
+
+    <div id="productMessage" class="message"></div>
+
+  </section>
+
+
+  <!-- ALL PRODUCTS -->
+
+  <section class="admin-card">
+
+    <div class="section-title">
+
+      <div>
+        <h2>All Products</h2>
+        <p>Manage your products</p>
+      </div>
+
+      <button id="refreshProductsBtn" class="small-btn">
+        Refresh
+      </button>
+
+    </div>
+
+
+    <div id="productsList" class="products-list">
+
+      <div class="loading">
+        Loading products...
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
 <script src="/admin/admin.js"></script>
-</body></html>
+
+</body>
+</html>
