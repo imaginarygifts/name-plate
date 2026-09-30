@@ -1,31 +1,346 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Imaginary Gifts — Catalogue</title>
-<link rel="stylesheet" href="/css/catalogue.css">
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Catalogue</title>
+
+  <link
+    rel="stylesheet"
+    href="/css/catalogue.css"
+  >
+
 </head>
+
 <body>
-<header class="header">
-  <a class="logo" href="/">Imaginary Gifts</a>
-  <a class="admin-link" href="/admin/">Admin</a>
-</header>
-<main class="container">
-  <div id="loading" class="loading">Loading catalogue…</div>
-  <div id="catalogues"></div>
-</main>
-<div id="lightbox" class="lightbox hidden">
-  <button id="close" class="close">×</button>
-  <button id="prev" class="nav prev">‹</button>
-  <img id="lightboxImg" alt="">
-  <button id="next" class="nav next">›</button>
-  <div class="lightbox-info">
-    <strong id="lightboxName"></strong>
-    <span id="lightboxMeta"></span>
-    <button id="orderBtn" class="order">Order Now</button>
+
+
+<!-- ================= TOP BAR ================= -->
+
+<header class="topbar">
+
+  <div class="shop-name" id="shopName">
+    YOUR NAME
   </div>
+
+</header>
+
+
+
+<!-- ================= PRODUCT PAGE ================= -->
+
+<main class="product-page">
+
+
+  <!-- PRODUCT TITLE -->
+
+  <section class="product-header">
+
+    <h1 id="productName">
+      Loading...
+    </h1>
+
+    <div
+      id="productPrice"
+      class="product-price"
+    >
+      ₹0
+    </div>
+
+  </section>
+
+
+
+  <!-- ================= COLOUR ================= -->
+
+  <section
+    id="colourSection"
+    class="variant-section hidden"
+  >
+
+    <div class="variant-title">
+      Colour
+    </div>
+
+    <div
+      id="colourList"
+      class="variant-scroll"
+    ></div>
+
+  </section>
+
+
+
+  <!-- ================= SIZE ================= -->
+
+  <section
+    id="sizeSection"
+    class="variant-section hidden"
+  >
+
+    <div class="variant-title">
+      Size
+    </div>
+
+    <div
+      id="sizeList"
+      class="variant-scroll"
+    ></div>
+
+  </section>
+
+
+
+  <!-- ================= IMAGES ================= -->
+
+  <section class="images-section">
+
+    <div
+      id="imageGrid"
+      class="image-grid"
+    ></div>
+
+  </section>
+
+
+</main>
+
+
+
+<!-- ================= IMAGE VIEWER ================= -->
+
+<div
+  id="imageViewer"
+  class="image-viewer hidden"
+>
+
+  <div class="viewer-top">
+
+    <button
+      id="closeViewer"
+      class="viewer-close"
+    >
+      ×
+    </button>
+
+    <div
+      id="viewerCounter"
+      class="viewer-counter"
+    >
+      1 / 1
+    </div>
+
+  </div>
+
+
+
+  <div
+    id="viewerImages"
+    class="viewer-images"
+  ></div>
+
+
+
+  <!-- VIEWER BOTTOM -->
+
+  <div class="viewer-bottom">
+
+
+    <div class="viewer-variants">
+
+
+      <!-- COLOUR -->
+
+      <div
+        id="viewerColourSection"
+        class="viewer-variant-section hidden"
+      >
+
+        <div class="viewer-label">
+          Colour
+        </div>
+
+        <div
+          id="viewerColours"
+          class="viewer-variant-scroll"
+        ></div>
+
+      </div>
+
+
+
+      <!-- SIZE -->
+
+      <div
+        id="viewerSizeSection"
+        class="viewer-variant-section hidden"
+      >
+
+        <div class="viewer-label">
+          Size
+        </div>
+
+        <div
+          id="viewerSizes"
+          class="viewer-variant-scroll"
+        ></div>
+
+      </div>
+
+
+    </div>
+
+
+
+    <!-- PRICE -->
+
+    <div
+      id="viewerPrice"
+      class="viewer-price"
+    >
+      ₹0
+    </div>
+
+
+
+    <button
+      id="orderButton"
+      class="order-button"
+    >
+      Order Now
+    </button>
+
+
+  </div>
+
 </div>
+
+
+
+<!-- ================= ORDER FORM ================= -->
+
+<div
+  id="orderModal"
+  class="order-modal hidden"
+>
+
+  <div class="order-card">
+
+
+    <button
+      id="closeOrder"
+      class="order-close"
+    >
+      ×
+    </button>
+
+
+    <h2>
+      Place Order
+    </h2>
+
+
+    <p class="order-product">
+      <span id="orderProductName"></span>
+    </p>
+
+
+
+    <!-- NAME -->
+
+    <input
+      id="customerName"
+      type="text"
+      placeholder="Your Name"
+      autocomplete="name"
+    >
+
+
+
+    <!-- NUMBER -->
+
+    <input
+      id="customerPhone"
+      type="tel"
+      placeholder="Mobile Number"
+      autocomplete="tel"
+    >
+
+
+
+    <!-- ADDRESS -->
+
+    <textarea
+      id="customerAddress"
+      placeholder="Complete Address"
+      rows="4"
+    ></textarea>
+
+
+
+    <!-- PINCODE -->
+
+    <input
+      id="customerPincode"
+      type="text"
+      inputmode="numeric"
+      maxlength="6"
+      placeholder="Pincode"
+      autocomplete="postal-code"
+    >
+
+
+
+    <!-- SUMMARY -->
+
+    <div class="order-summary">
+
+      <div>
+        <span>Colour</span>
+        <strong id="orderColour">-</strong>
+      </div>
+
+      <div>
+        <span>Size</span>
+        <strong id="orderSize">-</strong>
+      </div>
+
+      <div class="summary-total">
+        <span>Total</span>
+        <strong id="orderPrice">₹0</strong>
+      </div>
+
+    </div>
+
+
+
+    <button
+      id="confirmOrder"
+      class="confirm-order"
+    >
+      Order on WhatsApp
+    </button>
+
+
+    <div
+      id="orderMessage"
+      class="order-message"
+    ></div>
+
+
+  </div>
+
+</div>
+
+
+
 <script src="/js/catalogue.js"></script>
+
 </body>
 </html>
