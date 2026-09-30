@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "imaginary-gifts-db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+      "database_id": "64200ff8-ff11-4daa-92d8-d38938cd8c29"
     }
   ],
   "r2_buckets": [
