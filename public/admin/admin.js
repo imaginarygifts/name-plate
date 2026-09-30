@@ -1,32 +1,970 @@
-const $=id=>document.getElementById(id);
-let colours=[],sizes=[];
+const $ = (id) => document.getElementById(id);
 
-async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{"content-type":"application/json",...(opts.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");return d}
-async function boot(){try{await api("/api/me");$("loginBox").classList.add("hidden");$("adminBox").classList.remove("hidden");load()}catch{}}
-$("login").onclick=async()=>{try{await api("/api/login",{method:"POST",body:JSON.stringify({email:$("email").value,password:$("password").value})});location.reload()}catch(e){$("loginMsg").textContent=e.message}}
-$("setup").onclick=async()=>{try{const d=await api("/api/setup",{method:"POST",body:JSON.stringify({setupKey:$("setupKey").value,email:$("setupEmail").value,password:$("setupPassword").value})});$("setupMsg").textContent=d.message||"Admin created. You can now log in."}catch(e){$("setupMsg").textContent=e.message}}
-$("logout").onclick=async()=>{await api("/api/logout",{method:"POST"});location.reload()};
-$("newCat").onclick=reset;
-$("addColour").onclick=()=>{colours.push({id:crypto.randomUUID(),name:"",});renderColours()};
-$("addSize").onclick=()=>{sizes.push({id:crypto.randomUUID(),name:"",prices:{}});renderSizes()};
-function renderColours(){ $("colours").innerHTML=colours.map((c,i)=>`<div class="row"><input data-ci="${i}" value="${c.name||""}" placeholder="Black"><button data-cdel="${i}" class="secondary">Remove</button></div>`).join("");$("colours").querySelectorAll("[data-ci]").forEach(x=>x.oninput=()=>colours[x.dataset.ci].name=x.value);$("colours").querySelectorAll("[data-cdel]").forEach(x=>x.onclick=()=>{colours.splice(x.dataset.cdel,1);renderColours();renderSizes()})}
-function renderSizes(){ $("sizes").innerHTML=sizes.map((s,i)=>`<div class="item"><div class="row"><input data-si="${i}" value="${s.name||""}" placeholder="12×18"><button data-sdel="${i}" class="secondary">Remove</button></div>${colours.map(c=>`<div class="row"><span class="muted">${c.name||"Colour"}</span><input type="number" data-price="${i}:${c.id}" value="${Number(s.prices?.[c.id]||0)}" placeholder="Price"></div>`).join("")}</div>`).join("");$("sizes").querySelectorAll("[data-si]").forEach(x=>x.oninput=()=>sizes[x.dataset.si].name=x.value);$("sizes").querySelectorAll("[data-sdel]").forEach(x=>x.onclick=()=>{sizes.splice(x.dataset.sdel,1);renderSizes()});$("sizes").querySelectorAll("[data-price]").forEach(x=>x.oninput=()=>{const [i,c]=x.dataset.price.split(":");sizes[i].prices??={};sizes[i].prices[c]=Number(x.value||0)})}
-async function load(){const list=await api("/api/admin/catalogues");$("catList").innerHTML=list.map(c=>`<div class="item"><strong>${c.name}</strong><div class="muted">${c.images?.length||0} images · ${c.active?"Published":"Hidden"}</div><button data-edit="${c.id}" class="secondary">Edit</button><button data-del="${c.id}" class="secondary danger">Delete</button></div>`).join("");$("catList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>edit(b.dataset.edit,list));$("catList").querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(confirm("Delete catalogue?")){await api("/api/admin/catalogues/"+b.dataset.del,{method:"DELETE"});load()}})}
-async function edit(id,list){
- const c=list.find(x=>x.id===id); if(!c)return;
- $("catId").value=c.id;$("catName").value=c.name;$("catDesc").value=c.description||"";
- $("catOrder").value=c.order||0;$("catActive").checked=c.active!==false;
- colours=structuredClone(c.colours||[]);sizes=structuredClone(c.sizes||[]);
- renderColours();renderSizes();await loadProductsForUpload();renderImages(c.images||[]);
+let colours = [];
+let sizes = [];
+let editingProductId = null;
+
+
+/* ================= API ================= */
+
+async function api(url, options = {}) {
+
+  const response = await fetch(url, {
+    ...options,
+
+    headers: {
+      ...(options.body instanceof FormData
+        ? {}
+        : { "content-type": "application/json" }),
+
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "Request failed");
+  }
+
+  return data;
 }
-function reset(){$("catId").value="";$("catName").value="";$("catDesc").value="";$("catOrder").value=0;$("catActive").checked=true;colours=[];sizes=[];renderColours();renderSizes();$("imageList").innerHTML="";$("imageProduct").innerHTML='<option value="">Link to product (optional)</option>'}
-async function loadProductsForUpload(){const p=await api("/api/admin/products");$("imageProduct").innerHTML='<option value="">Link to product (optional)</option>'+p.map(x=>`<option value="${x.id}">${x.name}</option>`).join("")}
-function renderImages(images){$("imageList").innerHTML=images.map(x=>`<div class="item"><img src="${x.imageUrl}" style="width:80px;height:80px;object-fit:cover;border-radius:8px"><div class="muted">${x.alt||""}</div><button class="secondary" data-imgdel="${x.id}">Remove</button></div>`).join("");$("imageList").querySelectorAll("[data-imgdel]").forEach(b=>b.onclick=async()=>{await api("/api/admin/catalogue-images/"+b.dataset.imgdel,{method:"DELETE"});load()})}
-$("uploadImage").onclick=async()=>{
- const cid=$("catId").value;if(!cid){alert("Save the catalogue first, then upload images.");return}
- const f=$("imageFile").files[0];if(!f){alert("Choose an image.");return}
- const fd=new FormData();fd.append("catalogueId",cid);fd.append("productId",$("imageProduct").value);fd.append("colour",$("imageColour").value);fd.append("alt",$("imageAlt").value);fd.append("file",f);
- const r=await fetch("/api/admin/catalogue-images",{method:"POST",body:fd});const d=await r.json();if(!r.ok)throw new Error(d.error||"Upload failed");$("imageFile").value="";$("imageAlt").value="";$("imageColour").value="";load();
+
+
+/* ================= LOGIN STATE ================= */
+
+async function checkLogin() {
+
+  try {
+
+    const user = await api("/api/me");
+
+    if (user.loggedIn) {
+
+      showAdmin();
+
+      loadProducts();
+
+      return;
+    }
+
+  } catch (error) {}
+
+  showLogin();
+}
+
+
+function showLogin() {
+
+  $("loginPage").classList.remove("hidden");
+  $("adminPage").classList.add("hidden");
+
+  $("logoutBtn").classList.add("hidden");
+
+  showLoginForm();
+}
+
+
+function showAdmin() {
+
+  $("loginPage").classList.add("hidden");
+  $("adminPage").classList.remove("hidden");
+
+  $("logoutBtn").classList.remove("hidden");
+}
+
+
+/* ================= LOGIN FORM ================= */
+
+function showLoginForm() {
+
+  $("authTitle").textContent = "Admin Login";
+
+  $("authSubtitle").textContent =
+    "Login to manage your products";
+
+  $("loginForm").classList.remove("hidden");
+
+  $("registerForm").classList.add("hidden");
+
+  $("loginMessage").textContent = "";
+  $("registerMessage").textContent = "";
+}
+
+
+function showRegisterForm() {
+
+  $("authTitle").textContent = "New User";
+
+  $("authSubtitle").textContent =
+    "Create your admin account";
+
+  $("loginForm").classList.add("hidden");
+
+  $("registerForm").classList.remove("hidden");
+
+  $("registerMessage").textContent = "";
+}
+
+
+/* ================= LOGIN ================= */
+
+$("loginBtn").onclick = async () => {
+
+  const email =
+    $("loginEmail").value.trim();
+
+  const password =
+    $("loginPassword").value;
+
+  if (!email || !password) {
+
+    $("loginMessage").textContent =
+      "Enter email and password.";
+
+    return;
+  }
+
+  try {
+
+    $("loginBtn").disabled = true;
+
+    await api("/api/login", {
+
+      method: "POST",
+
+      body: JSON.stringify({
+        email,
+        password
+      })
+
+    });
+
+    showAdmin();
+
+    loadProducts();
+
+  } catch (error) {
+
+    $("loginMessage").textContent =
+      error.message;
+
+  } finally {
+
+    $("loginBtn").disabled = false;
+
+  }
+
 };
-$("saveCat").onclick=async()=>{const body={name:$("catName").value.trim(),description:$("catDesc").value,order:Number($("catOrder").value||0),active:$("catActive").checked,colours,sizes};const cid=$("catId").value;await api(cid?"/api/admin/catalogues/"+cid:"/api/admin/catalogues",{method:cid?"PUT":"POST",body:JSON.stringify(body)});reset();load()};
-boot();loadProductsForUpload().catch(()=>{});
+
+
+/* ================= NEW USER ================= */
+
+$("showRegisterBtn").onclick =
+  showRegisterForm;
+
+
+$("showLoginBtn").onclick =
+  showLoginForm;
+
+
+$("registerBtn").onclick = async () => {
+
+  const email =
+    $("registerEmail").value.trim();
+
+  const password =
+    $("registerPassword").value;
+
+  const password2 =
+    $("registerPassword2").value;
+
+
+  if (!email || !password) {
+
+    $("registerMessage").textContent =
+      "Enter email and password.";
+
+    return;
+  }
+
+
+  if (password.length < 8) {
+
+    $("registerMessage").textContent =
+      "Password must be at least 8 characters.";
+
+    return;
+  }
+
+
+  if (password !== password2) {
+
+    $("registerMessage").textContent =
+      "Passwords do not match.";
+
+    return;
+  }
+
+
+  try {
+
+    $("registerBtn").disabled = true;
+
+    const result = await api("/api/register", {
+
+      method: "POST",
+
+      body: JSON.stringify({
+        email,
+        password
+      })
+
+    });
+
+
+    $("registerEmail").value = "";
+    $("registerPassword").value = "";
+    $("registerPassword2").value = "";
+
+    showLoginForm();
+
+    $("loginEmail").value = email;
+
+    $("loginMessage").textContent =
+      result.message ||
+      "User created successfully. Please login.";
+
+    $("loginMessage").classList.add("success");
+
+  } catch (error) {
+
+    $("registerMessage").textContent =
+      error.message;
+
+  } finally {
+
+    $("registerBtn").disabled = false;
+
+  }
+
+};
+
+
+/* ================= LOGOUT ================= */
+
+$("logoutBtn").onclick = async () => {
+
+  try {
+
+    await api("/api/logout", {
+      method: "POST"
+    });
+
+  } catch (error) {}
+
+  location.reload();
+};
+
+
+/* ================= COLOURS ================= */
+
+$("addColourBtn").onclick = () => {
+
+  colours.push({
+    id: crypto.randomUUID(),
+    name: "",
+    price: 0
+  });
+
+  renderColours();
+};
+
+
+function renderColours() {
+
+  $("colourList").innerHTML =
+    colours.map((colour, index) => {
+
+      return `
+        <div class="option-row">
+
+          <input
+            type="text"
+            placeholder="Colour e.g. Black"
+            value="${escapeHtml(colour.name)}"
+            data-colour-name="${index}"
+          >
+
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Price"
+            value="${Number(colour.price || 0)}"
+            data-colour-price="${index}"
+          >
+
+          <button
+            class="remove-btn"
+            data-remove-colour="${index}"
+          >
+            ×
+          </button>
+
+        </div>
+      `;
+
+    }).join("");
+
+
+  document
+    .querySelectorAll("[data-colour-name]")
+    .forEach(input => {
+
+      input.oninput = () => {
+
+        colours[input.dataset.colourName].name =
+          input.value;
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll("[data-colour-price]")
+    .forEach(input => {
+
+      input.oninput = () => {
+
+        colours[input.dataset.colourPrice].price =
+          Number(input.value || 0);
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll("[data-remove-colour]")
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        colours.splice(
+          Number(button.dataset.removeColour),
+          1
+        );
+
+        renderColours();
+
+      };
+
+    });
+
+}
+
+
+/* ================= SIZES ================= */
+
+$("addSizeBtn").onclick = () => {
+
+  sizes.push({
+    id: crypto.randomUUID(),
+    name: "",
+    price: 0
+  });
+
+  renderSizes();
+};
+
+
+function renderSizes() {
+
+  $("sizeList").innerHTML =
+    sizes.map((size, index) => {
+
+      return `
+        <div class="option-row">
+
+          <input
+            type="text"
+            placeholder="Size e.g. 12x18"
+            value="${escapeHtml(size.name)}"
+            data-size-name="${index}"
+          >
+
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Price"
+            value="${Number(size.price || 0)}"
+            data-size-price="${index}"
+          >
+
+          <button
+            class="remove-btn"
+            data-remove-size="${index}"
+          >
+            ×
+          </button>
+
+        </div>
+      `;
+
+    }).join("");
+
+
+  document
+    .querySelectorAll("[data-size-name]")
+    .forEach(input => {
+
+      input.oninput = () => {
+
+        sizes[input.dataset.sizeName].name =
+          input.value;
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll("[data-size-price]")
+    .forEach(input => {
+
+      input.oninput = () => {
+
+        sizes[input.dataset.sizePrice].price =
+          Number(input.value || 0);
+
+      };
+
+    });
+
+
+  document
+    .querySelectorAll("[data-remove-size]")
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        sizes.splice(
+          Number(button.dataset.removeSize),
+          1
+        );
+
+        renderSizes();
+
+      };
+
+    });
+
+}
+
+
+/* ================= IMAGE PREVIEW ================= */
+
+$("productImages").onchange = () => {
+
+  const files =
+    Array.from($("productImages").files || []);
+
+  $("imagePreview").innerHTML = "";
+
+  files.forEach(file => {
+
+    const url =
+      URL.createObjectURL(file);
+
+    const div =
+      document.createElement("div");
+
+    div.className =
+      "preview-item";
+
+    div.innerHTML =
+      `<img src="${url}" alt="">`;
+
+    $("imagePreview").appendChild(div);
+
+  });
+
+};
+
+
+/* ================= SAVE PRODUCT ================= */
+
+$("saveProductBtn").onclick = async () => {
+
+  const name =
+    $("productName").value.trim();
+
+  const price =
+    Number($("productPrice").value || 0);
+
+  const active =
+    $("productActive").checked;
+
+
+  if (!name) {
+
+    showProductMessage(
+      "Enter product name."
+    );
+
+    return;
+
+  }
+
+
+  try {
+
+    $("saveProductBtn").disabled = true;
+
+
+    const body = {
+
+      name,
+
+      price,
+
+      active,
+
+      data: {
+
+        colours,
+
+        sizes
+
+      }
+
+    };
+
+
+    let result;
+
+
+    if (editingProductId) {
+
+      result = await api(
+        `/api/admin/products/${editingProductId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(body)
+        }
+      );
+
+    } else {
+
+      result = await api(
+        "/api/admin/products",
+        {
+          method: "POST",
+          body: JSON.stringify(body)
+        }
+      );
+
+    }
+
+
+    const productId =
+      editingProductId || result.id;
+
+
+    /* Upload selected images */
+
+    const files =
+      Array.from(
+        $("productImages").files || []
+      );
+
+
+    for (const file of files) {
+
+      const form =
+        new FormData();
+
+      form.append(
+        "productId",
+        productId
+      );
+
+      form.append(
+        "file",
+        file
+      );
+
+
+      await fetch(
+        "/api/admin/product-images",
+        {
+          method: "POST",
+          body: form
+        }
+      );
+
+    }
+
+
+    showProductMessage(
+      editingProductId
+        ? "Product updated successfully."
+        : "Product saved successfully.",
+      true
+    );
+
+
+    resetProductForm();
+
+    await loadProducts();
+
+
+  } catch (error) {
+
+    showProductMessage(
+      error.message
+    );
+
+  } finally {
+
+    $("saveProductBtn").disabled = false;
+
+  }
+
+};
+
+
+/* ================= LOAD PRODUCTS ================= */
+
+async function loadProducts() {
+
+  try {
+
+    const products =
+      await api("/api/admin/products");
+
+    renderProducts(products);
+
+  } catch (error) {
+
+    $("productsList").innerHTML =
+      `<div class="empty">${escapeHtml(error.message)}</div>`;
+
+  }
+
+}
+
+
+function renderProducts(products) {
+
+  if (!products.length) {
+
+    $("productsList").innerHTML =
+      `<div class="empty">
+        No products added yet.
+      </div>`;
+
+    return;
+
+  }
+
+
+  $("productsList").innerHTML =
+    products.map(product => {
+
+      const data =
+        product.data || {};
+
+      const image =
+        product.imageUrl ||
+        data.images?.[0] ||
+        "";
+
+
+      return `
+        <div class="product-item">
+
+          ${
+            image
+              ? `<img
+                  class="product-image"
+                  src="${escapeHtml(image)}"
+                  alt=""
+                >`
+              : `<div class="product-image"></div>`
+          }
+
+
+          <div class="product-info">
+
+            <h3>
+              ${escapeHtml(product.name)}
+            </h3>
+
+            <p>
+              ₹${Number(product.price || 0).toLocaleString("en-IN")}
+            </p>
+
+            <span class="product-status ${
+              product.active
+                ? "status-on"
+                : "status-off"
+            }">
+
+              ${
+                product.active
+                  ? "Shown on Frontend"
+                  : "Hidden"
+              }
+
+            </span>
+
+          </div>
+
+
+          <div class="product-actions">
+
+            <button
+              class="edit-btn"
+              data-edit="${product.id}"
+            >
+              Edit
+            </button>
+
+            <button
+              class="delete-btn"
+              data-delete="${product.id}"
+            >
+              Delete
+            </button>
+
+          </div>
+
+        </div>
+      `;
+
+    }).join("");
+
+
+  document
+    .querySelectorAll("[data-edit]")
+    .forEach(button => {
+
+      button.onclick =
+        () => editProduct(
+          button.dataset.edit,
+          products
+        );
+
+    });
+
+
+  document
+    .querySelectorAll("[data-delete]")
+    .forEach(button => {
+
+      button.onclick =
+        () => deleteProduct(
+          button.dataset.delete
+        );
+
+    });
+
+}
+
+
+/* ================= EDIT ================= */
+
+function editProduct(id, products) {
+
+  const product =
+    products.find(
+      item => item.id === id
+    );
+
+  if (!product) return;
+
+
+  editingProductId =
+    product.id;
+
+
+  $("productFormTitle").textContent =
+    "Edit Product";
+
+
+  $("productId").value =
+    product.id;
+
+
+  $("productName").value =
+    product.name || "";
+
+
+  $("productPrice").value =
+    product.price || 0;
+
+
+  $("productActive").checked =
+    product.active !== false;
+
+
+  const data =
+    product.data || {};
+
+
+  colours =
+    structuredClone(
+      data.colours || []
+    );
+
+
+  sizes =
+    structuredClone(
+      data.sizes || []
+    );
+
+
+  renderColours();
+  renderSizes();
+
+
+  $("productImages").value = "";
+
+  $("imagePreview").innerHTML = "";
+
+
+  $("cancelEditBtn")
+    .classList
+    .remove("hidden");
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+}
+
+
+/* ================= DELETE ================= */
+
+async function deleteProduct(id) {
+
+  if (!confirm(
+    "Are you sure you want to delete this product?"
+  )) {
+
+    return;
+
+  }
+
+
+  try {
+
+    await api(
+      `/api/admin/products/${id}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+
+    await loadProducts();
+
+
+  } catch (error) {
+
+    alert(error.message);
+
+  }
+
+}
+
+
+/* ================= RESET ================= */
+
+$("cancelEditBtn").onclick =
+  resetProductForm;
+
+
+function resetProductForm() {
+
+  editingProductId = null;
+
+  $("productFormTitle").textContent =
+    "Add Product";
+
+  $("productId").value = "";
+
+  $("productName").value = "";
+
+  $("productPrice").value = "";
+
+  $("productActive").checked = true;
+
+  $("productImages").value = "";
+
+  $("imagePreview").innerHTML = "";
+
+  colours = [];
+
+  sizes = [];
+
+  renderColours();
+
+  renderSizes();
+
+  $("cancelEditBtn")
+    .classList
+    .add("hidden");
+
+}
+
+
+/* ================= REFRESH ================= */
+
+$("refreshProductsBtn").onclick =
+  loadProducts;
+
+
+/* ================= MESSAGE ================= */
+
+function showProductMessage(
+  message,
+  success = false
+) {
+
+  $("productMessage").textContent =
+    message;
+
+  $("productMessage")
+    .classList
+    .toggle(
+      "success",
+      success
+    );
+
+}
+
+
+/* ================= ESCAPE HTML ================= */
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+/* ================= START ================= */
+
+checkLogin();
