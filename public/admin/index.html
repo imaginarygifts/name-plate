@@ -1,770 +1,790 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Imaginary Gifts Admin</title>
+  <title>Imaginary Gifts - Admin</title>
 
-<link rel="stylesheet" href="/admin/admin.css">
+  <link rel="stylesheet" href="/admin/admin.css">
 </head>
 
 <body>
 
-<header class="admin-header">
+  <!-- =====================================================
+       LOGIN / REGISTER
+  ====================================================== -->
 
-    <div>
-        <h1>Imaginary Gifts</h1>
-        <p>Product Administration</p>
-    </div>
+  <div id="authScreen" class="auth-screen">
 
-    <div class="header-actions">
+    <div class="auth-card">
 
-        <span id="adminEmail" class="admin-email"></span>
-
-        <button
-            id="logoutButton"
-            class="secondary-btn"
-        >
-            Logout
-        </button>
-
-    </div>
-
-</header>
-
-
-<main class="admin-layout">
-
-
-<!-- ==================================================
-     LOGIN
-================================================== -->
-
-<section id="loginBox" class="auth-card">
-
-    <h2>Admin Login</h2>
-
-    <p class="muted">
-        Login to manage your products.
-    </p>
-
-    <form id="loginForm">
-
-        <div class="field">
-
-            <label>Email</label>
-
-            <input
-                id="loginEmail"
-                type="email"
-                placeholder="admin@example.com"
-                required
-            >
-
+      <div class="brand">
+        <div class="brand-icon">IG</div>
+        <div>
+          <h1>Imaginary Gifts</h1>
+          <p>Admin Panel</p>
         </div>
+      </div>
 
+      <!-- LOGIN -->
 
-        <div class="field">
+      <div id="loginBox">
 
-            <label>Password</label>
+        <h2>Welcome Back</h2>
+        <p class="muted">Login to manage your products.</p>
 
-            <input
-                id="loginPassword"
-                type="password"
-                placeholder="Password"
-                required
-            >
+        <form id="loginForm">
 
-        </div>
+          <label>Email</label>
+          <input
+            type="email"
+            id="loginEmail"
+            placeholder="Enter email"
+            autocomplete="email"
+            required
+          >
 
+          <label>Password</label>
+          <input
+            type="password"
+            id="loginPassword"
+            placeholder="Enter password"
+            autocomplete="current-password"
+            required
+          >
 
-        <button
-            type="submit"
-            class="gradient-btn full-btn"
-        >
+          <button type="submit" class="primary-btn">
             Login
-        </button>
+          </button>
 
-    </form>
-
-
-    <div id="loginMessage" class="message"></div>
-
-
-    <button
-        id="showRegisterButton"
-        type="button"
-        class="text-btn"
-    >
-        New User
-    </button>
-
-</section>
-
-
-
-<!-- ==================================================
-     REGISTER
-================================================== -->
-
-<section
-    id="registerBox"
-    class="auth-card hidden"
->
-
-    <h2>Create Admin User</h2>
-
-    <p class="muted">
-        Create a new admin account.
-    </p>
-
-
-    <form id="registerForm">
-
-        <div class="field">
-
-            <label>Email</label>
-
-            <input
-                id="registerEmail"
-                type="email"
-                placeholder="admin@example.com"
-                required
-            >
-
-        </div>
-
-
-        <div class="field">
-
-            <label>Password</label>
-
-            <input
-                id="registerPassword"
-                type="password"
-                minlength="8"
-                placeholder="Minimum 8 characters"
-                required
-            >
-
-        </div>
-
+        </form>
 
         <button
-            type="submit"
-            class="gradient-btn full-btn"
+          type="button"
+          id="showRegisterBtn"
+          class="link-btn"
         >
-            Create User
+          New User
         </button>
 
-    </form>
+        <div id="loginMessage" class="message"></div>
+
+      </div>
 
 
-    <div id="registerMessage" class="message"></div>
+      <!-- REGISTER -->
+
+      <div id="registerBox" class="hidden">
+
+        <h2>Create Account</h2>
+        <p class="muted">
+          Create a new admin account.
+        </p>
+
+        <form id="registerForm">
+
+          <label>Email</label>
+          <input
+            type="email"
+            id="registerEmail"
+            placeholder="Enter email"
+            required
+          >
+
+          <label>Password</label>
+          <input
+            type="password"
+            id="registerPassword"
+            placeholder="Create password"
+            required
+          >
+
+          <button type="submit" class="primary-btn">
+            Create Account
+          </button>
+
+        </form>
+
+        <button
+          type="button"
+          id="showLoginBtn"
+          class="link-btn"
+        >
+          ← Back to Login
+        </button>
+
+        <div id="registerMessage" class="message"></div>
+
+      </div>
+
+    </div>
+
+  </div>
 
 
-    <button
-        id="backLoginButton"
-        type="button"
-        class="text-btn"
-    >
-        ← Back to Login
-    </button>
+  <!-- =====================================================
+       ADMIN APP
+  ====================================================== -->
 
-</section>
+  <div id="adminApp" class="admin-app hidden">
 
+    <!-- SIDEBAR -->
 
+    <aside class="sidebar">
 
-<!-- ==================================================
-     ADMIN AREA
-================================================== -->
+      <div class="sidebar-brand">
 
-<section
-    id="adminBox"
-    class="admin-content hidden"
->
-
-
-<!-- ==================================================
-     PRODUCT EDITOR
-================================================== -->
-
-<div class="editor-card">
-
-    <div class="card-title-row">
+        <div class="brand-icon">IG</div>
 
         <div>
+          <strong>Imaginary Gifts</strong>
+          <small>Admin Panel</small>
+        </div>
 
-            <h2 id="formTitle">
+      </div>
+
+
+      <nav>
+
+        <button
+          class="nav-btn active"
+          data-section="productsSection"
+        >
+          <span>📦</span>
+          Products
+        </button>
+
+        <button
+          class="nav-btn"
+          data-section="categoriesSection"
+        >
+          <span>🏷️</span>
+          Categories
+        </button>
+
+      </nav>
+
+
+      <div class="sidebar-bottom">
+
+        <div class="admin-email" id="adminEmail"></div>
+
+        <button id="logoutBtn" class="logout-btn">
+          Logout
+        </button>
+
+      </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+
+    <main class="main-content">
+
+      <!-- =================================================
+           PRODUCTS
+      ================================================== -->
+
+      <section id="productsSection" class="admin-section active">
+
+        <div class="page-header">
+
+          <div>
+            <h1>Products</h1>
+            <p>Manage your catalogue products.</p>
+          </div>
+
+          <button
+            id="newProductBtn"
+            class="primary-btn"
+          >
+            + Add Product
+          </button>
+
+        </div>
+
+
+        <!-- PRODUCT EDITOR -->
+
+        <div id="productEditor" class="editor-card hidden">
+
+          <div class="editor-header">
+
+            <div>
+              <h2 id="editorTitle">
                 Add Product
-            </h2>
+              </h2>
 
-            <p class="muted">
-                Create or edit your product.
-            </p>
-
-        </div>
-
-
-        <button
-            id="newProductButton"
-            type="button"
-            class="secondary-btn"
-        >
-            + New Product
-        </button>
-
-    </div>
-
-
-<form id="productForm">
-
-
-<input
-    id="productId"
-    type="hidden"
->
-
-
-<!-- ==================================================
-     BASIC PRODUCT
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <h3>Basic Information</h3>
-
-    </div>
-
-
-    <div class="field">
-
-        <label>
-            Product Name *
-        </label>
-
-        <input
-            id="productName"
-            type="text"
-            placeholder="Acrylic Glossy Name Plate"
-            required
-        >
-
-    </div>
-
-
-    <div class="field">
-
-        <label>
-            Base Price (₹) *
-        </label>
-
-        <input
-            id="productPrice"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="1000"
-            required
-        >
-
-    </div>
-
-
-    <div class="field">
-
-        <label>
-            Description
-        </label>
-
-        <textarea
-            id="productDescription"
-            rows="4"
-            placeholder="Product description..."
-        ></textarea>
-
-    </div>
-
-
-    <!-- CATEGORY -->
-
-    <div class="field">
-
-        <label>
-            Category *
-        </label>
-
-
-        <div class="category-select-row">
-
-            <select id="productCategory">
-
-                <option value="">
-                    Select Category
-                </option>
-
-            </select>
-
+              <p class="muted">
+                Create or edit product details.
+              </p>
+            </div>
 
             <button
-                id="createCategoryButton"
+              id="closeEditorBtn"
+              class="icon-btn"
+              type="button"
+            >
+              ✕
+            </button>
+
+          </div>
+
+
+          <form id="productForm">
+
+            <input
+              type="hidden"
+              id="productId"
+            >
+
+
+            <!-- BASIC DETAILS -->
+
+            <div class="form-section">
+
+              <h3>Basic Details</h3>
+
+              <div class="form-grid">
+
+                <div class="field full">
+
+                  <label>Product Name *</label>
+
+                  <input
+                    type="text"
+                    id="productName"
+                    placeholder="Example: Personalized Name Plate"
+                    required
+                  >
+
+                </div>
+
+
+                <div class="field">
+
+                  <label>Base Price *</label>
+
+                  <div class="price-input">
+
+                    <span>₹</span>
+
+                    <input
+                      type="number"
+                      id="productPrice"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      required
+                    >
+
+                  </div>
+
+                </div>
+
+
+                <div class="field">
+
+                  <label>Category</label>
+
+                  <div class="inline-field">
+
+                    <select id="productCategory">
+
+                      <option value="">
+                        Select Category
+                      </option>
+
+                    </select>
+
+                    <button
+                      type="button"
+                      id="createCategoryBtn"
+                      class="secondary-btn small"
+                    >
+                      + Create
+                    </button>
+
+                  </div>
+
+                </div>
+
+
+                <div class="field full">
+
+                  <label>Description</label>
+
+                  <textarea
+                    id="productDescription"
+                    rows="4"
+                    placeholder="Product description..."
+                  ></textarea>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <!-- COLOURS -->
+
+            <div class="form-section">
+
+              <div class="section-heading">
+
+                <div>
+                  <h3>Colours</h3>
+                  <p class="muted">
+                    Add colour options and additional pricing.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  id="addColourBtn"
+                  class="secondary-btn"
+                >
+                  + Add Colour
+                </button>
+
+              </div>
+
+              <div
+                id="coloursContainer"
+                class="variant-list"
+              ></div>
+
+            </div>
+
+
+            <!-- SIZES -->
+
+            <div class="form-section">
+
+              <div class="section-heading">
+
+                <div>
+                  <h3>Sizes</h3>
+                  <p class="muted">
+                    Add size options and additional pricing.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  id="addSizeBtn"
+                  class="secondary-btn"
+                >
+                  + Add Size
+                </button>
+
+              </div>
+
+              <div
+                id="sizesContainer"
+                class="variant-list"
+              ></div>
+
+            </div>
+
+
+            <!-- CUSTOM VARIANTS -->
+
+            <div class="form-section">
+
+              <div class="section-heading">
+
+                <div>
+                  <h3>Custom Variants</h3>
+
+                  <p class="muted">
+                    Create options such as Design, Shape,
+                    Brand, Thickness, Material, etc.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  id="addVariantBtn"
+                  class="secondary-btn"
+                >
+                  + Add Variant
+                </button>
+
+              </div>
+
+              <div
+                id="customVariantsContainer"
+                class="custom-variants"
+              ></div>
+
+            </div>
+
+
+            <!-- IMAGES -->
+
+            <div class="form-section">
+
+              <div class="section-heading">
+
+                <div>
+                  <h3>Product Images</h3>
+
+                  <p class="muted">
+                    Upload multiple product images.
+                  </p>
+                </div>
+
+              </div>
+
+
+              <div
+                id="imageDropZone"
+                class="image-drop-zone"
+              >
+
+                <input
+                  type="file"
+                  id="productImages"
+                  accept="image/*"
+                  multiple
+                  hidden
+                >
+
+                <div class="upload-icon">
+                  ⬆
+                </div>
+
+                <strong>
+                  Click to select images
+                </strong>
+
+                <span>
+                  You can select multiple images
+                </span>
+
+              </div>
+
+
+              <div
+                id="imagePreviewContainer"
+                class="image-preview-grid"
+              ></div>
+
+            </div>
+
+
+            <!-- FRONTEND -->
+
+            <div class="form-section">
+
+              <label class="checkbox-label">
+
+                <input
+                  type="checkbox"
+                  id="productActive"
+                  checked
+                >
+
+                <span>
+                  <strong>Show on Frontend</strong>
+
+                  <small>
+                    Make this product visible on the customer catalogue.
+                  </small>
+                </span>
+
+              </label>
+
+            </div>
+
+
+            <!-- ACTIONS -->
+
+            <div class="editor-actions">
+
+              <button
                 type="button"
+                id="cancelProductBtn"
                 class="secondary-btn"
-            >
-                + Create Category
-            </button>
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                class="primary-btn"
+                id="saveProductBtn"
+              >
+                Save Product
+              </button>
+
+            </div>
+
+          </form>
 
         </div>
 
-    </div>
 
-
-    <div class="two-column">
-
-        <label class="checkbox-row">
-
-            <input
-                id="productActive"
-                type="checkbox"
-                checked
-            >
-
-            <span>
-                Show on Frontend
-            </span>
-
-        </label>
-
-    </div>
-
-</div>
-
-
-
-<!-- ==================================================
-     COLOURS
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Colours</h3>
-
-            <p class="muted">
-                Colour options with additional price.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div id="colourList"></div>
-
-
-    <button
-        id="addColourButton"
-        type="button"
-        class="secondary-btn add-btn"
-    >
-        + Add Colour
-    </button>
-
-</div>
-
-
-
-<!-- ==================================================
-     SIZES
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Sizes</h3>
-
-            <p class="muted">
-                Size options with additional price.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div id="sizeList"></div>
-
-
-    <button
-        id="addSizeButton"
-        type="button"
-        class="secondary-btn add-btn"
-    >
-        + Add Size
-    </button>
-
-</div>
-
-
-
-<!-- ==================================================
-     CUSTOM VARIANTS
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Custom Variants</h3>
-
-            <p class="muted">
-                Create any type of variant you want.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div class="variant-help">
-
-        Examples:
-        <b>Design</b>,
-        <b>Shape</b>,
-        <b>Brand</b>,
-        <b>Thickness</b>,
-        <b>Material</b>,
-        <b>Finish</b>,
-        etc.
-
-    </div>
-
-
-    <div id="variantList"></div>
-
-
-    <button
-        id="addVariantButton"
-        type="button"
-        class="gradient-btn add-btn"
-    >
-        + Create Variant
-    </button>
-
-</div>
-
-
-
-<!-- ==================================================
-     IMAGES
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Product Images</h3>
-
-            <p class="muted">
-                Add multiple product images.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <label class="image-upload-box">
-
-        <input
-            id="productImages"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-            multiple
-            hidden
-        >
-
-        <span class="upload-icon">
-            +
-        </span>
-
-        <strong>
-            Select Product Images
-        </strong>
-
-        <small>
-            JPG, PNG, WEBP, GIF or AVIF
-        </small>
-
-    </label>
-
-
-    <div
-        id="imagePreview"
-        class="image-preview-grid"
-    ></div>
-
-</div>
-
-
-
-<!-- ==================================================
-     SAVE
-================================================== -->
-
-<div class="form-actions">
-
-    <button
-        id="saveProductButton"
-        type="submit"
-        class="gradient-btn large-btn"
-    >
-        Save Product
-    </button>
-
-
-    <button
-        id="cancelEditButton"
-        type="button"
-        class="secondary-btn large-btn"
-    >
-        Cancel
-    </button>
-
-</div>
-
-
-</form>
-
-</div>
-
-
-
-<!-- ==================================================
-     ALL PRODUCTS
-================================================== -->
-
-<div class="list-card">
-
-    <div class="card-title-row">
-
-        <div>
-
-            <h2>All Products</h2>
-
-            <p class="muted">
-                Edit, duplicate or delete products.
-            </p>
-
-        </div>
-
-
-        <span
-            id="productCount"
-            class="count-badge"
-        >
-            0
-        </span>
-
-    </div>
-
-
-    <div
-        id="productList"
-        class="product-list"
-    ></div>
-
-</div>
-
-
-</section>
-
-</main>
-
-
-
-<!-- ==================================================
-     CATEGORY MODAL
-================================================== -->
-
-<div
-    id="categoryModal"
-    class="modal hidden"
->
-
-    <div class="modal-card small-modal">
-
-        <div class="modal-header">
-
-            <h3>Create Category</h3>
-
-            <button
-                id="closeCategoryModal"
-                class="modal-close"
-            >
-                ×
-            </button>
-
-        </div>
-
-
-        <div class="field">
-
-            <label>
-                Category Name
-            </label>
-
-            <input
-                id="newCategoryName"
-                placeholder="Name Plates"
-            >
-
-        </div>
-
+        <!-- PRODUCT LIST -->
 
         <div
-            id="categoryMessage"
-            class="message"
-        ></div>
+          id="productsListCard"
+          class="products-card"
+        >
+
+          <div class="list-header">
+
+            <div>
+              <h2>All Products</h2>
+              <span
+                id="productCount"
+                class="count-badge"
+              >
+                0
+              </span>
+            </div>
+
+            <button
+              id="refreshProductsBtn"
+              class="secondary-btn"
+            >
+              ↻ Refresh
+            </button>
+
+          </div>
+
+          <div
+            id="productsList"
+            class="products-list"
+          ></div>
+
+        </div>
+
+      </section>
+
+
+      <!-- =================================================
+           CATEGORIES
+      ================================================== -->
+
+      <section
+        id="categoriesSection"
+        class="admin-section"
+      >
+
+        <div class="page-header">
+
+          <div>
+            <h1>Categories</h1>
+
+            <p>
+              Create and manage product categories.
+            </p>
+          </div>
+
+          <button
+            id="addCategoryPageBtn"
+            class="primary-btn"
+          >
+            + Add Category
+          </button>
+
+        </div>
+
+
+        <div class="categories-card">
+
+          <div class="list-header">
+
+            <div>
+              <h2>All Categories</h2>
+
+              <span
+                id="categoryCount"
+                class="count-badge"
+              >
+                0
+              </span>
+            </div>
+
+            <button
+              id="refreshCategoriesBtn"
+              class="secondary-btn"
+            >
+              ↻ Refresh
+            </button>
+
+          </div>
+
+
+          <div
+            id="categoriesList"
+            class="categories-list"
+          ></div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- =====================================================
+       CATEGORY MODAL
+  ====================================================== -->
+
+  <div
+    id="categoryModal"
+    class="modal-overlay hidden"
+  >
+
+    <div class="modal-card">
+
+      <div class="modal-header">
+
+        <div>
+          <h2>Create Category</h2>
+          <p class="muted">
+            Add a category for your products.
+          </p>
+        </div>
+
+        <button
+          id="closeCategoryModalBtn"
+          class="icon-btn"
+          type="button"
+        >
+          ✕
+        </button>
+
+      </div>
+
+
+      <form id="categoryForm">
+
+        <label>Category Name *</label>
+
+        <input
+          type="text"
+          id="categoryName"
+          placeholder="Example: Name Plates"
+          required
+        >
+
+
+        <label>Slug</label>
+
+        <input
+          type="text"
+          id="categorySlug"
+          placeholder="name-plates"
+        >
+
+        <p class="field-help">
+          Leave blank to generate automatically.
+        </p>
 
 
         <div class="modal-actions">
 
-            <button
-                id="cancelCategoryButton"
-                class="secondary-btn"
-                type="button"
-            >
-                Cancel
-            </button>
+          <button
+            type="button"
+            id="cancelCategoryBtn"
+            class="secondary-btn"
+          >
+            Cancel
+          </button>
 
-            <button
-                id="saveCategoryButton"
-                class="gradient-btn"
-                type="button"
-            >
-                Create Category
-            </button>
+          <button
+            type="submit"
+            class="primary-btn"
+          >
+            Create Category
+          </button>
 
         </div>
 
+        <div
+          id="categoryMessage"
+          class="message"
+        ></div>
+
+      </form>
+
     </div>
 
-</div>
+  </div>
 
 
+  <!-- =====================================================
+       UPLOAD PROGRESS MODAL
+  ====================================================== -->
 
-<!-- ==================================================
-     IMAGE UPLOAD PROGRESS
-================================================== -->
-
-<div
+  <div
     id="uploadModal"
-    class="modal hidden"
->
+    class="modal-overlay hidden"
+  >
 
     <div class="modal-card upload-modal">
 
-        <div class="upload-modal-icon">
-            ↑
-        </div>
+      <div class="upload-modal-icon">
+        ⬆
+      </div>
 
+      <h2>Uploading Images</h2>
 
-        <h2>
-            Uploading Images
-        </h2>
+      <p id="uploadStatus">
+        Preparing upload...
+      </p>
 
-
-        <p
-            id="uploadCurrentText"
-            class="muted"
-        >
-            Preparing...
-        </p>
-
-
-        <div class="progress-number">
-
-            <span id="uploadImageNumber">
-                0 / 0
-            </span>
-
-            <strong id="uploadPercent">
-                0%
-            </strong>
-
-        </div>
-
-
-        <div class="progress-track">
-
-            <div
-                id="uploadProgress"
-                class="progress-bar"
-            ></div>
-
-        </div>
-
-
-        <p
-            id="uploadFileName"
-            class="upload-file-name"
-        >
-            Waiting...
-        </p>
-
+      <div class="progress-wrapper">
 
         <div
-            id="uploadStatus"
-            class="upload-status"
+          id="uploadProgressBar"
+          class="progress-bar"
         ></div>
+
+      </div>
+
+      <div class="progress-info">
+
+        <strong id="uploadPercent">
+          0%
+        </strong>
+
+        <span id="uploadFileNumber">
+          0 / 0
+        </span>
+
+      </div>
+
+      <div
+        id="uploadFileName"
+        class="upload-file-name"
+      ></div>
 
     </div>
 
-</div>
+  </div>
 
 
+  <!-- =====================================================
+       TOAST
+  ====================================================== -->
 
-<!-- ==================================================
-     GENERAL LOADING
-================================================== -->
-
-<div
-    id="loadingOverlay"
-    class="loading-overlay hidden"
->
-
-    <div class="loader"></div>
-
-    <strong id="loadingText">
-        Loading...
-    </strong>
-
-</div>
-
-
-
-<div
+  <div
     id="toast"
     class="toast"
-></div>
+  ></div>
 
 
-
-<script src="/admin/admin.js"></script>
+  <script src="/admin/admin.js"></script>
 
 </body>
 </html>
