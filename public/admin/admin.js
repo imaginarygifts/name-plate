@@ -1,2471 +1,2905 @@
-/* =====================================================
-   ADMIN PRODUCT MANAGER
-===================================================== */
+/* =========================================================
+   IMAGINARY GIFTS ADMIN
+   Compatible with original Worker authentication/API
+========================================================= */
 
-const $ = id => document.getElementById(id);
+const $ = (selector) => document.querySelector(selector);
 
+const state = {
+  products: [],
+  categories: [],
 
-/* =====================================================
-   STATE
-===================================================== */
+  editingProduct: null,
 
-let editingId = null;
+  selectedImages: [],
+  existingImages: [],
 
-let colours = [];
-let sizes = [];
-let variants = [];
-
-let existingImages = [];
-let newImages = [];
-
-let products = [];
-let categories = [];
+  customVariants: []
+};
 
 
-
-/* =====================================================
+/* =========================================================
    API
-===================================================== */
+========================================================= */
 
 async function api(url, options = {}) {
 
-    const config = {
-        ...options,
-        headers: {
-            ...(options.body instanceof FormData
-                ? {}
-                : {
-                    "content-type": "application/json"
-                }),
-            ...(options.headers || {})
-        }
+  const config = {
+    credentials: "include",
+    ...options
+  };
+
+  if (
+    config.body &&
+    !(config.body instanceof FormData)
+  ) {
+    config.headers = {
+      "content-type": "application/json",
+      ...(config.headers || {})
     };
+  }
 
-    const response = await fetch(url, config);
+  const response = await fetch(url, config);
 
-    const data =
-        await response
-            .json()
-            .catch(() => ({}));
+  let data = null;
 
-    if (!response.ok) {
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
 
-        throw new Error(
-            data.error ||
-            "Request failed"
-        );
+  if (!response.ok) {
+
+    const message =
+      data?.error ||
+      data?.message ||
+      `Request failed (${response.status})`;
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+
+/* =========================================================
+   INIT
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", init);
+
+async function init() {
+
+  bindEvents();
+
+  await checkLogin();
+}
+
+
+/* =========================================================
+   AUTH
+========================================================= */
+
+async function checkLogin() {
+
+  try {
+
+    const data = await api("/api/me");
+
+    if (
+      data &&
+      data.loggedIn
+    ) {
+
+      showAdmin(data.email);
+
+    } else {
+
+      showAuth();
 
     }
 
-    return data;
+  } catch {
+
+    showAuth();
+
+  }
 
 }
 
 
+function showAuth() {
 
-/* =====================================================
-   HELPERS
-===================================================== */
-
-function esc(value) {
-
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+  $("#authScreen").classList.remove("hidden");
+  $("#adminApp").classList.add("hidden");
 
 }
 
 
-function slugify(value) {
+function showAdmin(email = "") {
 
-    return String(value || "")
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
+  $("#authScreen").classList.add("hidden");
+  $("#adminApp").classList.remove("hidden");
 
+  $("#adminEmail").textContent = email || "";
+
+  loadCategories();
+  loadProducts();
 }
 
 
-function money(value) {
+/* =========================================================
+   LOGIN / REGISTER EVENTS
+========================================================= */
 
-    return Number(value || 0)
-        .toLocaleString("en-IN", {
-            maximumFractionDigits: 2
-        });
+function bindEvents() {
 
-}
-
-
-function toast(message) {
-
-    const el = $("toast");
-
-    el.textContent = message;
-
-    el.classList.add("show");
-
-    clearTimeout(el._timer);
-
-    el._timer = setTimeout(() => {
-
-        el.classList.remove("show");
-
-    }, 2800);
-
-}
-
-
-function loading(show, text = "Loading...") {
-
-    $("loadingText").textContent = text;
-
-    $("loadingOverlay")
-        .classList.toggle(
-            "hidden",
-            !show
-        );
-
-}
-
-
-
-/* =====================================================
-   LOGIN / REGISTER
-===================================================== */
-
-async function boot() {
-
-    try {
-
-        const me =
-            await api("/api/me");
-
-        $("loginBox")
-            .classList.add("hidden");
-
-        $("registerBox")
-            .classList.add("hidden");
-
-        $("adminBox")
-            .classList.remove("hidden");
-
-        $("adminEmail").textContent =
-            me.email || "";
-
-        await loadCategories();
-
-        await loadProducts();
-
-        resetForm();
-
-    }
-    catch {
-
-        $("loginBox")
-            .classList.remove("hidden");
-
-        $("adminBox")
-            .classList.add("hidden");
-
-    }
-
-}
-
-
-$("loginForm").addEventListener(
+  $("#loginForm").addEventListener(
     "submit",
-    async event => {
+    handleLogin
+  );
 
-        event.preventDefault();
+  $("#registerForm").addEventListener(
+    "submit",
+    handleRegister
+  );
 
-        try {
-
-            $("loginMessage").textContent =
-                "Logging in...";
-
-            await api(
-                "/api/login",
-                {
-                    method: "POST",
-
-                    body: JSON.stringify({
-                        email:
-                            $("loginEmail").value.trim(),
-
-                        password:
-                            $("loginPassword").value
-                    })
-                }
-            );
-
-            location.reload();
-
-        }
-        catch (error) {
-
-            $("loginMessage").textContent =
-                error.message;
-
-        }
-
-    }
-);
-
-
-
-$("showRegisterButton").onclick =
+  $("#showRegisterBtn").addEventListener(
+    "click",
     () => {
 
-        $("loginBox")
-            .classList.add("hidden");
-
-        $("registerBox")
-            .classList.remove("hidden");
-
-    };
-
-
-
-$("backLoginButton").onclick =
-    () => {
-
-        $("registerBox")
-            .classList.add("hidden");
-
-        $("loginBox")
-            .classList.remove("hidden");
-
-    };
-
-
-
-$("registerForm").addEventListener(
-    "submit",
-    async event => {
-
-        event.preventDefault();
-
-        try {
-
-            $("registerMessage").textContent =
-                "Creating user...";
-
-            const result =
-                await api(
-                    "/api/register",
-                    {
-                        method: "POST",
-
-                        body: JSON.stringify({
-                            email:
-                                $("registerEmail").value.trim(),
-
-                            password:
-                                $("registerPassword").value
-                        })
-                    }
-                );
-
-            $("registerMessage").textContent =
-                result.message ||
-                "User created. Please login.";
-
-            setTimeout(() => {
-
-                $("registerBox")
-                    .classList.add("hidden");
-
-                $("loginBox")
-                    .classList.remove("hidden");
-
-            }, 1000);
-
-        }
-        catch (error) {
-
-            $("registerMessage").textContent =
-                error.message;
-
-        }
+      $("#loginBox").classList.add("hidden");
+      $("#registerBox").classList.remove("hidden");
 
     }
-);
+  );
+
+  $("#showLoginBtn").addEventListener(
+    "click",
+    () => {
+
+      $("#registerBox").classList.add("hidden");
+      $("#loginBox").classList.remove("hidden");
+
+    }
+  );
+
+  $("#logoutBtn").addEventListener(
+    "click",
+    logout
+  );
 
 
+  /* Navigation */
 
-$("logoutButton").onclick =
-    async () => {
+  document
+    .querySelectorAll(".nav-btn")
+    .forEach(button => {
 
-        await api(
-            "/api/logout",
-            {
-                method: "POST"
-            }
-        );
+      button.addEventListener(
+        "click",
+        () => {
 
-        location.reload();
+          switchSection(
+            button.dataset.section
+          );
 
-    };
+        }
+      );
+
+    });
 
 
+  /* Products */
 
-/* =====================================================
-   CATEGORIES
-===================================================== */
+  $("#newProductBtn").addEventListener(
+    "click",
+    () => openProductEditor()
+  );
 
-async function loadCategories() {
+  $("#closeEditorBtn").addEventListener(
+    "click",
+    closeProductEditor
+  );
 
-    categories =
-        await api(
-            "/api/admin/categories"
-        );
+  $("#cancelProductBtn").addEventListener(
+    "click",
+    closeProductEditor
+  );
 
-    renderCategorySelect();
+  $("#productForm").addEventListener(
+    "submit",
+    saveProduct
+  );
+
+  $("#addColourBtn").addEventListener(
+    "click",
+    () => addColourRow()
+  );
+
+  $("#addSizeBtn").addEventListener(
+    "click",
+    () => addSizeRow()
+  );
+
+  $("#addVariantBtn").addEventListener(
+    "click",
+    () => addCustomVariant()
+  );
+
+  $("#refreshProductsBtn").addEventListener(
+    "click",
+    loadProducts
+  );
+
+
+  /* Image picker */
+
+  $("#imageDropZone").addEventListener(
+    "click",
+    () => $("#productImages").click()
+  );
+
+  $("#productImages").addEventListener(
+    "change",
+    handleImageSelection
+  );
+
+
+  /* Category */
+
+  $("#createCategoryBtn").addEventListener(
+    "click",
+    openCategoryModal
+  );
+
+  $("#addCategoryPageBtn").addEventListener(
+    "click",
+    openCategoryModal
+  );
+
+  $("#refreshCategoriesBtn").addEventListener(
+    "click",
+    loadCategories
+  );
+
+  $("#categoryForm").addEventListener(
+    "submit",
+    createCategory
+  );
+
+  $("#closeCategoryModalBtn").addEventListener(
+    "click",
+    closeCategoryModal
+  );
+
+  $("#cancelCategoryBtn").addEventListener(
+    "click",
+    closeCategoryModal
+  );
+
+
+  $("#categoryName").addEventListener(
+    "input",
+    () => {
+
+      if (
+        !$("#categorySlug").dataset.edited
+      ) {
+
+        $("#categorySlug").value =
+          slugify($("#categoryName").value);
+
+      }
+
+    }
+  );
+
+  $("#categorySlug").addEventListener(
+    "input",
+    () => {
+
+      $("#categorySlug").dataset.edited =
+        "true";
+
+    }
+  );
+
+
+  /* Escape */
+
+  document.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Escape"
+      ) {
+
+        closeCategoryModal();
+
+      }
+
+    }
+  );
 
 }
 
 
-function renderCategorySelect(
-    selected = ""
-) {
+/* =========================================================
+   LOGIN
+========================================================= */
 
-    const select =
-        $("productCategory");
+async function handleLogin(event) {
 
-    select.innerHTML = `
-        <option value="">
-            Select Category
-        </option>
+  event.preventDefault();
 
-        ${categories.map(category => `
+  const message = $("#loginMessage");
 
-            <option
-                value="${esc(category.id)}"
-                ${category.id === selected
-                    ? "selected"
-                    : ""}
-            >
-                ${esc(category.name)}
-            </option>
+  message.className = "message";
+  message.textContent = "Logging in...";
 
-        `).join("")}
-    `;
+  const email =
+    $("#loginEmail").value.trim();
+
+  const password =
+    $("#loginPassword").value;
+
+
+  try {
+
+    const data = await api(
+      "/api/login",
+      {
+        method: "POST",
+
+        body: JSON.stringify({
+          email,
+          password
+        })
+      }
+    );
+
+    message.className =
+      "message success";
+
+    message.textContent =
+      "Login successful.";
+
+    showAdmin(data.email || email);
+
+  } catch (error) {
+
+    message.className =
+      "message";
+
+    message.textContent =
+      error.message;
+
+  }
 
 }
 
 
-$("createCategoryButton").onclick =
-    openCategoryModal;
+/* =========================================================
+   REGISTER
+========================================================= */
+
+async function handleRegister(event) {
+
+  event.preventDefault();
+
+  const message =
+    $("#registerMessage");
+
+  message.className = "message";
+
+  message.textContent =
+    "Creating account...";
+
+  const email =
+    $("#registerEmail").value.trim();
+
+  const password =
+    $("#registerPassword").value;
 
 
+  try {
 
-function openCategoryModal() {
+    await api(
+      "/api/register",
+      {
+        method: "POST",
 
-    $("categoryModal")
-        .classList.remove("hidden");
+        body: JSON.stringify({
+          email,
+          password
+        })
+      }
+    );
 
-    $("newCategoryName").value = "";
+    message.className =
+      "message success";
 
-    $("categoryMessage").textContent = "";
+    message.textContent =
+      "Account created. Please login.";
+
+    $("#registerForm").reset();
 
     setTimeout(() => {
 
-        $("newCategoryName").focus();
+      $("#registerBox")
+        .classList.add("hidden");
 
-    }, 100);
+      $("#loginBox")
+        .classList.remove("hidden");
+
+      $("#loginEmail").value =
+        email;
+
+    }, 700);
+
+  } catch (error) {
+
+    message.className =
+      "message";
+
+    message.textContent =
+      error.message;
+
+  }
+
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+async function logout() {
+
+  try {
+
+    await api(
+      "/api/logout",
+      {
+        method: "POST"
+      }
+    );
+
+  } catch {}
+
+  location.reload();
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function switchSection(sectionId) {
+
+  document
+    .querySelectorAll(".admin-section")
+    .forEach(section => {
+
+      section.classList.remove("active");
+
+    });
+
+  const section =
+    document.getElementById(sectionId);
+
+  if (section) {
+
+    section.classList.add("active");
+
+  }
+
+
+  document
+    .querySelectorAll(".nav-btn")
+    .forEach(button => {
+
+      button.classList.toggle(
+        "active",
+        button.dataset.section === sectionId
+      );
+
+    });
+
+
+  if (
+    sectionId === "categoriesSection"
+  ) {
+
+    loadCategories();
+
+  }
+
+}
+
+
+/* =========================================================
+   PRODUCTS - LOAD
+========================================================= */
+
+async function loadProducts() {
+
+  const container =
+    $("#productsList");
+
+  container.innerHTML = `
+    <div class="empty-state">
+      Loading products...
+    </div>
+  `;
+
+
+  try {
+
+    const data =
+      await api("/api/admin/products");
+
+    /*
+      IMPORTANT:
+      Original Worker returns RAW ARRAY.
+    */
+
+    state.products =
+      Array.isArray(data)
+        ? data
+        : Array.isArray(data?.products)
+          ? data.products
+          : [];
+
+
+    renderProducts();
+
+  } catch (error) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">⚠️</div>
+        <div>${escapeHtml(error.message)}</div>
+      </div>
+    `;
+
+  }
+
+}
+
+
+/* =========================================================
+   PRODUCTS - RENDER
+========================================================= */
+
+function renderProducts() {
+
+  const container =
+    $("#productsList");
+
+  $("#productCount").textContent =
+    state.products.length;
+
+
+  if (!state.products.length) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+
+        <div class="empty-state-icon">
+          📦
+        </div>
+
+        <strong>
+          No products yet
+        </strong>
+
+        <p>
+          Click "Add Product" to create your first product.
+        </p>
+
+      </div>
+    `;
+
+    return;
+  }
+
+
+  container.innerHTML =
+    state.products
+      .map(product => {
+
+        const image =
+          getProductImage(product);
+
+        const category =
+          getProductCategory(product);
+
+        const price =
+          Number(product.price || 0);
+
+
+        return `
+          <div class="product-row">
+
+            <div class="product-thumb">
+
+              ${
+                image
+                  ? `
+                    <img
+                      src="${escapeAttr(image)}"
+                      alt="${escapeAttr(product.name || "")}"
+                    >
+                  `
+                  : `
+                    <div
+                      style="
+                        height:100%;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        color:#52525b;
+                        font-size:22px;
+                      "
+                    >
+                      📦
+                    </div>
+                  `
+              }
+
+            </div>
+
+
+            <div class="product-info">
+
+              <strong>
+                ${escapeHtml(product.name || "Untitled")}
+              </strong>
+
+              <small>
+                ${escapeHtml(category || "No category")}
+              </small>
+
+            </div>
+
+
+            <div class="product-price">
+              ₹${formatMoney(price)}
+            </div>
+
+
+            <div>
+
+              <span
+                class="product-status ${
+                  product.active ? "" : "off"
+                }"
+              >
+                ${
+                  product.active
+                    ? "Visible"
+                    : "Hidden"
+                }
+              </span>
+
+            </div>
+
+
+            <div class="product-actions">
+
+              <button
+                class="action-btn"
+                onclick="editProduct('${escapeAttr(product.id)}')"
+              >
+                Edit
+              </button>
+
+              <button
+                class="action-btn"
+                onclick="duplicateProduct('${escapeAttr(product.id)}')"
+              >
+                Duplicate
+              </button>
+
+              <button
+                class="action-btn delete"
+                onclick="deleteProduct('${escapeAttr(product.id)}')"
+              >
+                Delete
+              </button>
+
+            </div>
+
+          </div>
+        `;
+
+      })
+      .join("");
+
+}
+
+
+/* =========================================================
+   PRODUCT EDITOR
+========================================================= */
+
+function openProductEditor(product = null) {
+
+  state.editingProduct =
+    product;
+
+  state.selectedImages = [];
+  state.existingImages = [];
+
+
+  $("#productForm").reset();
+
+  $("#productId").value =
+    product?.id || "";
+
+  $("#editorTitle").textContent =
+    product
+      ? "Edit Product"
+      : "Add Product";
+
+
+  $("#productName").value =
+    product?.name || "";
+
+  $("#productPrice").value =
+    product?.price ?? "";
+
+  $("#productDescription").value =
+    product?.description || "";
+
+  $("#productActive").checked =
+    product
+      ? Boolean(product.active)
+      : true;
+
+
+  /* Category */
+
+  const categoryId =
+    product?.data?.categoryId ||
+    product?.data?.category_id ||
+    "";
+
+  $("#productCategory").value =
+    categoryId;
+
+
+  /* Colours */
+
+  $("#coloursContainer").innerHTML = "";
+
+  const colours =
+    Array.isArray(product?.data?.colours)
+      ? product.data.colours
+      : [];
+
+  colours.forEach(
+    colour => addColourRow(colour)
+  );
+
+
+  /* Sizes */
+
+  $("#sizesContainer").innerHTML = "";
+
+  const sizes =
+    Array.isArray(product?.data?.sizes)
+      ? product.data.sizes
+      : [];
+
+  sizes.forEach(
+    size => addSizeRow(size)
+  );
+
+
+  /* Custom variants */
+
+  state.customVariants =
+    Array.isArray(product?.data?.variants)
+      ? clone(product.data.variants)
+      : [];
+
+  renderCustomVariants();
+
+
+  /* Images */
+
+  state.existingImages =
+    getExistingImages(product);
+
+  renderImages();
+
+
+  $("#productEditor")
+    .classList.remove("hidden");
+
+  $("#productsListCard")
+    .classList.add("hidden");
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+}
+
+
+function closeProductEditor() {
+
+  $("#productEditor")
+    .classList.add("hidden");
+
+  $("#productsListCard")
+    .classList.remove("hidden");
+
+  state.editingProduct = null;
+  state.selectedImages = [];
+  state.existingImages = [];
+}
+
+
+/* =========================================================
+   EDIT PRODUCT
+========================================================= */
+
+async function editProduct(productId) {
+
+  const product =
+    state.products.find(
+      item => item.id === productId
+    );
+
+  if (!product) {
+
+    toast(
+      "Product not found.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  openProductEditor(product);
+}
+
+
+/* =========================================================
+   DUPLICATE
+========================================================= */
+
+async function duplicateProduct(productId) {
+
+  const product =
+    state.products.find(
+      item => item.id === productId
+    );
+
+  if (!product) {
+
+    toast(
+      "Product not found.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  if (
+    !confirm(
+      `Duplicate "${product.name}"?`
+    )
+  ) {
+
+    return;
+  }
+
+
+  try {
+
+    const payload =
+      buildProductPayload(product);
+
+
+    payload.name =
+      `${product.name} (Copy)`;
+
+
+    const result =
+      await api(
+        "/api/admin/products",
+        {
+          method: "POST",
+
+          body: JSON.stringify(
+            payload
+          )
+        }
+      );
+
+
+    toast(
+      "Product duplicated.",
+      "success"
+    );
+
+
+    await loadProducts();
+
+
+    const newProduct =
+      state.products.find(
+        item =>
+          item.id === result.id
+      );
+
+
+    if (newProduct) {
+
+      openProductEditor(
+        newProduct
+      );
+
+    }
+
+  } catch (error) {
+
+    toast(
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   DELETE
+========================================================= */
+
+async function deleteProduct(productId) {
+
+  const product =
+    state.products.find(
+      item => item.id === productId
+    );
+
+  if (!product) return;
+
+
+  if (
+    !confirm(
+      `Delete "${product.name}"?\n\nThis cannot be undone.`
+    )
+  ) {
+
+    return;
+  }
+
+
+  try {
+
+    await api(
+      `/api/admin/products/${encodeURIComponent(productId)}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+
+    toast(
+      "Product deleted.",
+      "success"
+    );
+
+
+    await loadProducts();
+
+  } catch (error) {
+
+    toast(
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SAVE PRODUCT
+========================================================= */
+
+async function saveProduct(event) {
+
+  event.preventDefault();
+
+
+  const saveButton =
+    $("#saveProductBtn");
+
+  saveButton.disabled = true;
+
+  saveButton.textContent =
+    "Saving...";
+
+
+  try {
+
+    const payload =
+      buildProductPayload();
+
+
+    let result;
+
+
+    if (
+      payload.id
+    ) {
+
+      result =
+        await api(
+          `/api/admin/products/${encodeURIComponent(payload.id)}`,
+          {
+            method: "PUT",
+
+            body: JSON.stringify(
+              payload
+            )
+          }
+        );
+
+    } else {
+
+      result =
+        await api(
+          "/api/admin/products",
+          {
+            method: "POST",
+
+            body: JSON.stringify(
+              payload
+            )
+          }
+        );
+
+    }
+
+
+    const productId =
+      payload.id ||
+      result.id;
+
+
+    if (!productId) {
+
+      throw new Error(
+        "Product saved but no product ID was returned."
+      );
+
+    }
+
+
+    /* Upload newly selected images */
+
+    if (
+      state.selectedImages.length
+    ) {
+
+      await uploadImages(
+        productId,
+        state.selectedImages
+      );
+
+    }
+
+
+    toast(
+      "Product saved successfully.",
+      "success"
+    );
+
+
+    await loadProducts();
+
+
+    const updatedProduct =
+      state.products.find(
+        item => item.id === productId
+      );
+
+
+    closeProductEditor();
+
+
+    /*
+      Keep editor closed after save.
+      User can edit again from product list.
+    */
+
+
+  } catch (error) {
+
+    toast(
+      error.message,
+      "error"
+    );
+
+  } finally {
+
+    saveButton.disabled = false;
+
+    saveButton.textContent =
+      "Save Product";
+
+  }
+
+}
+
+
+/* =========================================================
+   BUILD PRODUCT PAYLOAD
+========================================================= */
+
+function buildProductPayload(
+  productOverride = null
+) {
+
+  const source =
+    productOverride || {};
+
+
+  const productId =
+    $("#productId")?.value ||
+    source.id ||
+    "";
+
+
+  const name =
+    $("#productName")?.value.trim() ||
+    source.name ||
+    "";
+
+
+  const price =
+    Number(
+      $("#productPrice")?.value ??
+      source.price ??
+      0
+    );
+
+
+  const description =
+    $("#productDescription")?.value ??
+    source.description ??
+    "";
+
+
+  const active =
+    $("#productActive")
+      ? $("#productActive").checked
+      : Boolean(source.active);
+
+
+  const categoryId =
+    $("#productCategory")?.value ||
+    source.data?.categoryId ||
+    "";
+
+
+  const colours =
+    productOverride
+      ? clone(
+          source.data?.colours || []
+        )
+      : readColourRows();
+
+
+  const sizes =
+    productOverride
+      ? clone(
+          source.data?.sizes || []
+        )
+      : readSizeRows();
+
+
+  const variants =
+    productOverride
+      ? clone(
+          source.data?.variants || []
+        )
+      : clone(
+          state.customVariants
+        );
+
+
+  const images =
+    productOverride
+      ? clone(
+          source.data?.images || []
+        )
+      : getExistingImages(
+          state.editingProduct
+        );
+
+
+  const data =
+    productOverride
+      ? clone(source.data || {})
+      : clone(
+          state.editingProduct?.data || {}
+        );
+
+
+  data.categoryId =
+    categoryId;
+
+
+  data.colours =
+    colours;
+
+
+  data.sizes =
+    sizes;
+
+
+  data.variants =
+    variants;
+
+
+  data.images =
+    images;
+
+
+  return {
+
+    id: productId,
+
+    name,
+
+    description,
+
+    price,
+
+    active,
+
+    data
+
+  };
+
+}
+
+
+/* =========================================================
+   COLOURS
+========================================================= */
+
+function addColourRow(data = {}) {
+
+  const container =
+    $("#coloursContainer");
+
+
+  const row =
+    document.createElement("div");
+
+  row.className =
+    "variant-row";
+
+
+  row.innerHTML = `
+
+    <input
+      type="text"
+      class="colour-name"
+      placeholder="Colour name"
+      value="${escapeAttr(data.name || "")}"
+    >
+
+    <select class="colour-price-type">
+
+      <option
+        value="INR"
+        ${
+          data.priceType !== "%"
+            ? "selected"
+            : ""
+        }
+      >
+        ₹
+      </option>
+
+      <option
+        value="%"
+        ${
+          data.priceType === "%"
+            ? "selected"
+            : ""
+        }
+      >
+        %
+      </option>
+
+    </select>
+
+    <input
+      type="number"
+      class="colour-price"
+      min="0"
+      step="0.01"
+      placeholder="Price"
+      value="${data.price ?? ""}"
+    >
+
+    <button
+      type="button"
+      class="remove-btn"
+    >
+      ✕
+    </button>
+
+  `;
+
+
+  row
+    .querySelector(".remove-btn")
+    .addEventListener(
+      "click",
+      () => row.remove()
+    );
+
+
+  container.appendChild(row);
+
+}
+
+
+function readColourRows() {
+
+  return [
+    ...document.querySelectorAll(
+      "#coloursContainer .variant-row"
+    )
+  ]
+    .map(row => {
+
+      const name =
+        row
+          .querySelector(".colour-name")
+          .value
+          .trim();
+
+      if (!name) return null;
+
+
+      return {
+
+        id:
+          crypto.randomUUID(),
+
+        name,
+
+        priceType:
+          row.querySelector(
+            ".colour-price-type"
+          ).value,
+
+        price:
+          Number(
+            row.querySelector(
+              ".colour-price"
+            ).value || 0
+          )
+
+      };
+
+    })
+    .filter(Boolean);
+
+}
+
+
+/* =========================================================
+   SIZES
+========================================================= */
+
+function addSizeRow(data = {}) {
+
+  const container =
+    $("#sizesContainer");
+
+
+  const row =
+    document.createElement("div");
+
+  row.className =
+    "variant-row";
+
+
+  row.innerHTML = `
+
+    <input
+      type="text"
+      class="size-name"
+      placeholder="Size"
+      value="${escapeAttr(data.name || "")}"
+    >
+
+    <select class="size-price-type">
+
+      <option
+        value="INR"
+        ${
+          data.priceType !== "%"
+            ? "selected"
+            : ""
+        }
+      >
+        ₹
+      </option>
+
+      <option
+        value="%"
+        ${
+          data.priceType === "%"
+            ? "selected"
+            : ""
+        }
+      >
+        %
+      </option>
+
+    </select>
+
+    <input
+      type="number"
+      class="size-price"
+      min="0"
+      step="0.01"
+      placeholder="Price"
+      value="${data.price ?? ""}"
+    >
+
+    <button
+      type="button"
+      class="remove-btn"
+    >
+      ✕
+    </button>
+
+  `;
+
+
+  row
+    .querySelector(".remove-btn")
+    .addEventListener(
+      "click",
+      () => row.remove()
+    );
+
+
+  container.appendChild(row);
+
+}
+
+
+function readSizeRows() {
+
+  return [
+    ...document.querySelectorAll(
+      "#sizesContainer .variant-row"
+    )
+  ]
+    .map(row => {
+
+      const name =
+        row
+          .querySelector(".size-name")
+          .value
+          .trim();
+
+      if (!name) return null;
+
+
+      return {
+
+        id:
+          crypto.randomUUID(),
+
+        name,
+
+        priceType:
+          row.querySelector(
+            ".size-price-type"
+          ).value,
+
+        price:
+          Number(
+            row.querySelector(
+              ".size-price"
+            ).value || 0
+          )
+
+      };
+
+    })
+    .filter(Boolean);
+
+}
+
+
+/* =========================================================
+   CUSTOM VARIANTS
+========================================================= */
+
+function addCustomVariant(data = null) {
+
+  const variant = data
+    ? clone(data)
+    : {
+
+        id:
+          crypto.randomUUID(),
+
+        name: "",
+
+        options: []
+
+      };
+
+
+  if (
+    !Array.isArray(
+      variant.options
+    )
+  ) {
+
+    variant.options = [];
+
+  }
+
+
+  state.customVariants.push(
+    variant
+  );
+
+  renderCustomVariants();
+
+}
+
+
+function renderCustomVariants() {
+
+  const container =
+    $("#customVariantsContainer");
+
+  container.innerHTML = "";
+
+
+  state.customVariants
+    .forEach(
+      (variant, variantIndex) => {
+
+        const card =
+          document.createElement("div");
+
+        card.className =
+          "custom-variant-card";
+
+
+        card.innerHTML = `
+
+          <div class="custom-variant-header">
+
+            <input
+              class="custom-variant-name"
+              type="text"
+              placeholder="Variant name — e.g. Design"
+              value="${escapeAttr(variant.name || "")}"
+            >
+
+            <button
+              type="button"
+              class="icon-btn remove-variant"
+              title="Remove variant"
+            >
+              ✕
+            </button>
+
+          </div>
+
+          <div class="option-list"></div>
+
+          <button
+            type="button"
+            class="add-option-btn"
+          >
+            + Add Option
+          </button>
+
+        `;
+
+
+        const nameInput =
+          card.querySelector(
+            ".custom-variant-name"
+          );
+
+
+        nameInput.addEventListener(
+          "input",
+          () => {
+
+            variant.name =
+              nameInput.value;
+
+          }
+        );
+
+
+        card
+          .querySelector(
+            ".remove-variant"
+          )
+          .addEventListener(
+            "click",
+            () => {
+
+              state.customVariants
+                .splice(
+                  variantIndex,
+                  1
+                );
+
+              renderCustomVariants();
+
+            }
+          );
+
+
+        const optionList =
+          card.querySelector(
+            ".option-list"
+          );
+
+
+        (variant.options || [])
+          .forEach(
+            (option, optionIndex) => {
+
+              renderOptionRow(
+                optionList,
+                variant,
+                option,
+                optionIndex
+              );
+
+            }
+          );
+
+
+        card
+          .querySelector(
+            ".add-option-btn"
+          )
+          .addEventListener(
+            "click",
+            () => {
+
+              variant.options.push({
+
+                id:
+                  crypto.randomUUID(),
+
+                name: "",
+
+                priceType: "INR",
+
+                price: 0
+
+              });
+
+              renderCustomVariants();
+
+            }
+          );
+
+
+        container.appendChild(card);
+
+      }
+    );
+
+}
+
+
+function renderOptionRow(
+  container,
+  variant,
+  option,
+  optionIndex
+) {
+
+  const row =
+    document.createElement("div");
+
+  row.className =
+    "option-row";
+
+
+  row.innerHTML = `
+
+    <input
+      type="text"
+      class="option-name"
+      placeholder="Option name"
+      value="${escapeAttr(option.name || "")}"
+    >
+
+    <select class="option-price-type">
+
+      <option
+        value="INR"
+        ${
+          option.priceType !== "%"
+            ? "selected"
+            : ""
+        }
+      >
+        ₹
+      </option>
+
+      <option
+        value="%"
+        ${
+          option.priceType === "%"
+            ? "selected"
+            : ""
+        }
+      >
+        %
+      </option>
+
+    </select>
+
+    <input
+      type="number"
+      class="option-price"
+      min="0"
+      step="0.01"
+      placeholder="Price"
+      value="${option.price ?? ""}"
+    >
+
+    <button
+      type="button"
+      class="remove-btn"
+    >
+      ✕
+    </button>
+
+  `;
+
+
+  row
+    .querySelector(".option-name")
+    .addEventListener(
+      "input",
+      event => {
+
+        option.name =
+          event.target.value;
+
+      }
+    );
+
+
+  row
+    .querySelector(".option-price-type")
+    .addEventListener(
+      "change",
+      event => {
+
+        option.priceType =
+          event.target.value;
+
+      }
+    );
+
+
+  row
+    .querySelector(".option-price")
+    .addEventListener(
+      "input",
+      event => {
+
+        option.price =
+          Number(
+            event.target.value || 0
+          );
+
+      }
+    );
+
+
+  row
+    .querySelector(".remove-btn")
+    .addEventListener(
+      "click",
+      () => {
+
+        variant.options
+          .splice(
+            optionIndex,
+            1
+          );
+
+        renderCustomVariants();
+
+      }
+    );
+
+
+  container.appendChild(row);
+
+}
+
+
+/* =========================================================
+   IMAGES - SELECTION
+========================================================= */
+
+function handleImageSelection(event) {
+
+  const files =
+    [...event.target.files];
+
+
+  if (!files.length) {
+    return;
+  }
+
+
+  state.selectedImages.push(
+    ...files
+  );
+
+
+  renderImages();
+
+
+  event.target.value = "";
+}
+
+
+/* =========================================================
+   IMAGES - RENDER
+========================================================= */
+
+function renderImages() {
+
+  const container =
+    $("#imagePreviewContainer");
+
+  container.innerHTML = "";
+
+
+  /* Existing */
+
+  state.existingImages
+    .forEach(
+      (image, index) => {
+
+        const item =
+          document.createElement("div");
+
+        item.className =
+          "image-preview";
+
+
+        item.innerHTML = `
+
+          <img
+            src="${escapeAttr(image.url)}"
+            alt=""
+          >
+
+          <button
+            type="button"
+            class="remove-image"
+            title="Remove image"
+          >
+            ✕
+          </button>
+
+        `;
+
+
+        item
+          .querySelector(
+            ".remove-image"
+          )
+          .addEventListener(
+            "click",
+            () => {
+
+              removeExistingImage(
+                index
+              );
+
+            }
+          );
+
+
+        container.appendChild(item);
+
+      }
+    );
+
+
+  /* New files */
+
+  state.selectedImages
+    .forEach(
+      (file, index) => {
+
+        const item =
+          document.createElement("div");
+
+        item.className =
+          "image-preview";
+
+
+        const image =
+          document.createElement("img");
+
+
+        image.src =
+          URL.createObjectURL(file);
+
+
+        item.appendChild(image);
+
+
+        const button =
+          document.createElement("button");
+
+        button.type = "button";
+
+        button.className =
+          "remove-image";
+
+        button.textContent =
+          "✕";
+
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            state.selectedImages
+              .splice(index, 1);
+
+            renderImages();
+
+          }
+        );
+
+
+        item.appendChild(button);
+
+        container.appendChild(item);
+
+      }
+    );
+
+}
+
+
+function getExistingImages(product) {
+
+  const images =
+    product?.data?.images;
+
+
+  if (!Array.isArray(images)) {
+    return [];
+  }
+
+
+  return images
+    .map(item => {
+
+      if (
+        typeof item === "string"
+      ) {
+
+        return {
+          url: item,
+          key: ""
+        };
+
+      }
+
+
+      return {
+
+        url:
+          item.url ||
+          item.imageUrl ||
+          "",
+
+        key:
+          item.key ||
+          item.objectKey ||
+          ""
+
+      };
+
+    })
+    .filter(
+      item => item.url
+    );
+
+}
+
+
+function removeExistingImage(index) {
+
+  const image =
+    state.existingImages[index];
+
+
+  if (!image) return;
+
+
+  if (
+    image.key &&
+    state.editingProduct?.id
+  ) {
+
+    deleteRemoteImage(
+      image,
+      index
+    );
+
+  } else {
+
+    state.existingImages
+      .splice(index, 1);
+
+    renderImages();
+
+  }
+
+}
+
+
+/* =========================================================
+   DELETE REMOTE IMAGE
+========================================================= */
+
+async function deleteRemoteImage(
+  image,
+  index
+) {
+
+  if (
+    !confirm(
+      "Delete this image?"
+    )
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    const encodedKey =
+      encodeURIComponent(
+        image.key
+      );
+
+
+    const url =
+      `/api/admin/product-images/${encodedKey}` +
+      `?productId=${encodeURIComponent(
+        state.editingProduct.id
+      )}`;
+
+
+    await api(
+      url,
+      {
+        method: "DELETE"
+      }
+    );
+
+
+    state.existingImages
+      .splice(index, 1);
+
+
+    renderImages();
+
+
+    toast(
+      "Image deleted.",
+      "success"
+    );
+
+  } catch (error) {
+
+    toast(
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   UPLOAD IMAGES
+========================================================= */
+
+async function uploadImages(
+  productId,
+  files
+) {
+
+  if (!files.length) {
+    return;
+  }
+
+
+  $("#uploadModal")
+    .classList.remove("hidden");
+
+
+  updateUploadProgress(
+    0,
+    0,
+    files.length,
+    "Starting..."
+  );
+
+
+  try {
+
+    for (
+      let i = 0;
+      i < files.length;
+      i++
+    ) {
+
+      const file =
+        files[i];
+
+
+      updateUploadProgress(
+        0,
+        i + 1,
+        files.length,
+        file.name
+      );
+
+
+      await uploadSingleImage(
+        productId,
+        file,
+        progress => {
+
+          const overall =
+            (
+              (i + progress / 100)
+              /
+              files.length
+            ) * 100;
+
+
+          updateUploadProgress(
+            overall,
+            i + 1,
+            files.length,
+            file.name
+          );
+
+        }
+      );
+
+    }
+
+
+    updateUploadProgress(
+      100,
+      files.length,
+      files.length,
+      "Upload complete"
+    );
+
+
+    await sleep(500);
+
+  } finally {
+
+    $("#uploadModal")
+      .classList.add("hidden");
+
+  }
+
+}
+
+
+function uploadSingleImage(
+  productId,
+  file,
+  onProgress
+) {
+
+  return new Promise(
+    (resolve, reject) => {
+
+      const xhr =
+        new XMLHttpRequest();
+
+
+      xhr.open(
+        "POST",
+        "/api/admin/product-images"
+      );
+
+
+      xhr.withCredentials =
+        true;
+
+
+      xhr.upload.onprogress =
+        event => {
+
+          if (
+            event.lengthComputable
+          ) {
+
+            const percent =
+              (
+                event.loaded /
+                event.total
+              ) * 100;
+
+            onProgress(percent);
+
+          }
+
+        };
+
+
+      xhr.onload =
+        () => {
+
+          let data = null;
+
+          try {
+
+            data =
+              JSON.parse(
+                xhr.responseText
+              );
+
+          } catch {}
+
+
+          if (
+            xhr.status >= 200 &&
+            xhr.status < 300
+          ) {
+
+            resolve(data);
+
+          } else {
+
+            reject(
+              new Error(
+                data?.error ||
+                `Image upload failed (${xhr.status})`
+              )
+            );
+
+          }
+
+        };
+
+
+      xhr.onerror =
+        () => {
+
+          reject(
+            new Error(
+              "Network error while uploading image."
+            )
+          );
+
+        };
+
+
+      const formData =
+        new FormData();
+
+
+      formData.append(
+        "productId",
+        productId
+      );
+
+      formData.append(
+        "image",
+        file
+      );
+
+
+      xhr.send(formData);
+
+    }
+  );
+
+}
+
+
+function updateUploadProgress(
+  percent,
+  current,
+  total,
+  filename
+) {
+
+  const safePercent =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(percent)
+      )
+    );
+
+
+  $("#uploadProgressBar")
+    .style.width =
+      `${safePercent}%`;
+
+
+  $("#uploadPercent")
+    .textContent =
+      `${safePercent}%`;
+
+
+  $("#uploadFileNumber")
+    .textContent =
+      `${current} / ${total}`;
+
+
+  $("#uploadFileName")
+    .textContent =
+      filename || "";
+
+
+  $("#uploadStatus")
+    .textContent =
+      safePercent >= 100
+        ? "Upload complete"
+        : `Uploading image ${current} of ${total}...`;
+
+}
+
+
+/* =========================================================
+   CATEGORIES
+========================================================= */
+
+async function loadCategories() {
+
+  try {
+
+    const data =
+      await api(
+        "/api/admin/categories"
+      );
+
+
+    state.categories =
+      Array.isArray(data)
+        ? data
+        : Array.isArray(data?.categories)
+          ? data.categories
+          : [];
+
+
+    renderCategorySelect();
+    renderCategoriesList();
+
+  } catch (error) {
+
+    console.error(
+      "Category load error:",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   CATEGORY SELECT
+========================================================= */
+
+function renderCategorySelect() {
+
+  const select =
+    $("#productCategory");
+
+
+  if (!select) return;
+
+
+  const current =
+    select.value;
+
+
+  select.innerHTML = `
+    <option value="">
+      Select Category
+    </option>
+  `;
+
+
+  state.categories
+    .forEach(category => {
+
+      const option =
+        document.createElement("option");
+
+      option.value =
+        category.id;
+
+      option.textContent =
+        category.name;
+
+
+      select.appendChild(option);
+
+    });
+
+
+  if (current) {
+
+    select.value =
+      current;
+
+  }
+
+}
+
+
+/* =========================================================
+   CATEGORY LIST
+========================================================= */
+
+function renderCategoriesList() {
+
+  const container =
+    $("#categoriesList");
+
+
+  $("#categoryCount")
+    .textContent =
+      state.categories.length;
+
+
+  if (!state.categories.length) {
+
+    container.innerHTML = `
+      <div class="empty-state">
+
+        <div class="empty-state-icon">
+          🏷️
+        </div>
+
+        <strong>
+          No categories yet
+        </strong>
+
+        <p>
+          Create your first category.
+        </p>
+
+      </div>
+    `;
+
+    return;
+
+  }
+
+
+  container.innerHTML =
+    state.categories
+      .map(category => `
+
+        <div class="category-row">
+
+          <div class="category-name">
+            ${escapeHtml(category.name)}
+          </div>
+
+          <div class="category-slug">
+            ${escapeHtml(category.slug)}
+          </div>
+
+          <div class="category-active">
+            ● Active
+          </div>
+
+        </div>
+
+      `)
+      .join("");
+
+}
+
+
+/* =========================================================
+   CATEGORY MODAL
+========================================================= */
+
+function openCategoryModal() {
+
+  $("#categoryModal")
+    .classList.remove("hidden");
+
+
+  $("#categoryForm").reset();
+
+  delete $("#categorySlug")
+    .dataset.edited;
+
+
+  $("#categoryMessage")
+    .textContent = "";
+
+
+  setTimeout(
+    () => $("#categoryName").focus(),
+    50
+  );
 
 }
 
 
 function closeCategoryModal() {
 
-    $("categoryModal")
-        .classList.add("hidden");
+  $("#categoryModal")
+    .classList.add("hidden");
 
 }
 
 
-$("closeCategoryModal").onclick =
-    closeCategoryModal;
+/* =========================================================
+   CREATE CATEGORY
+========================================================= */
 
+async function createCategory(event) {
 
-$("cancelCategoryButton").onclick =
-    closeCategoryModal;
+  event.preventDefault();
 
 
+  const message =
+    $("#categoryMessage");
 
-$("saveCategoryButton").onclick =
-    async () => {
 
-        const name =
-            $("newCategoryName")
-                .value
-                .trim();
+  const name =
+    $("#categoryName")
+      .value
+      .trim();
 
-        if (!name) {
 
-            $("categoryMessage").textContent =
-                "Enter category name.";
+  let slug =
+    $("#categorySlug")
+      .value
+      .trim();
 
-            return;
 
-        }
+  if (!name) {
 
-        try {
+    message.textContent =
+      "Category name is required.";
 
-            $("saveCategoryButton").disabled =
-                true;
+    return;
 
-            const result =
-                await api(
-                    "/api/admin/categories",
-                    {
-                        method: "POST",
+  }
 
-                        body: JSON.stringify({
-                            name
-                        })
-                    }
-                );
 
-            await loadCategories();
+  if (!slug) {
 
-            renderCategorySelect(
-                result.id
-            );
+    slug =
+      slugify(name);
 
-            closeCategoryModal();
+  }
 
-            toast(
-                "Category created successfully."
-            );
 
-        }
-        catch (error) {
+  message.className =
+    "message";
 
-            $("categoryMessage").textContent =
-                error.message;
+  message.textContent =
+    "Creating category...";
 
-        }
-        finally {
 
-            $("saveCategoryButton").disabled =
-                false;
+  try {
 
-        }
+    await api(
+      "/api/admin/categories",
+      {
+        method: "POST",
 
-    };
-
-
-
-/* =====================================================
-   COLOURS
-===================================================== */
-
-function addColour(
-    value = null
-) {
-
-    colours.push({
-
-        id:
-            value?.id ||
-            crypto.randomUUID(),
-
-        name:
-            value?.name ||
-            "",
-
-        priceType:
-            value?.priceType ||
-            "amount",
-
-        price:
-            Number(value?.price || 0)
-
-    });
-
-    renderColours();
-
-}
-
-
-$("addColourButton").onclick =
-    () => addColour();
-
-
-
-function renderColours() {
-
-    const box =
-        $("colourList");
-
-    if (!colours.length) {
-
-        box.innerHTML = `
-            <div class="empty-small">
-                No colours added.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    box.innerHTML =
-        colours.map((colour, index) => `
-
-            <div
-                class="variant-option-row"
-                data-colour-row="${index}"
-            >
-
-                <input
-                    type="text"
-                    value="${esc(colour.name)}"
-                    placeholder="Black"
-                    data-colour-name="${index}"
-                >
-
-
-                <select
-                    data-colour-type="${index}"
-                >
-
-                    <option
-                        value="amount"
-                        ${colour.priceType === "amount"
-                            ? "selected"
-                            : ""}
-                    >
-                        ₹ Amount
-                    </option>
-
-                    <option
-                        value="percent"
-                        ${colour.priceType === "percent"
-                            ? "selected"
-                            : ""}
-                    >
-                        % Percent
-                    </option>
-
-                </select>
-
-
-                <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value="${Number(colour.price || 0)}"
-                    placeholder="0"
-                    data-colour-price="${index}"
-                >
-
-
-                <button
-                    type="button"
-                    class="remove-btn"
-                    data-remove-colour="${index}"
-                >
-                    ×
-                </button>
-
-            </div>
-
-        `).join("");
-
-
-    box.querySelectorAll(
-        "[data-colour-name]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            colours[
-                Number(input.dataset.colourName)
-            ].name = input.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-colour-type]"
-    ).forEach(select => {
-
-        select.onchange = () => {
-
-            colours[
-                Number(select.dataset.colourType)
-            ].priceType = select.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-colour-price]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            colours[
-                Number(input.dataset.colourPrice)
-            ].price = Number(
-                input.value || 0
-            );
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-remove-colour]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            colours.splice(
-                Number(
-                    button.dataset.removeColour
-                ),
-                1
-            );
-
-            renderColours();
-
-        };
-
-    });
-
-}
-
-
-
-/* =====================================================
-   SIZES
-===================================================== */
-
-function addSize(
-    value = null
-) {
-
-    sizes.push({
-
-        id:
-            value?.id ||
-            crypto.randomUUID(),
-
-        name:
-            value?.name ||
-            "",
-
-        priceType:
-            value?.priceType ||
-            "amount",
-
-        price:
-            Number(value?.price || 0)
-
-    });
-
-    renderSizes();
-
-}
-
-
-$("addSizeButton").onclick =
-    () => addSize();
-
-
-
-function renderSizes() {
-
-    const box =
-        $("sizeList");
-
-    if (!sizes.length) {
-
-        box.innerHTML = `
-            <div class="empty-small">
-                No sizes added.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    box.innerHTML =
-        sizes.map((size, index) => `
-
-            <div
-                class="variant-option-row"
-            >
-
-                <input
-                    type="text"
-                    value="${esc(size.name)}"
-                    placeholder="12 × 18"
-                    data-size-name="${index}"
-                >
-
-
-                <select
-                    data-size-type="${index}"
-                >
-
-                    <option
-                        value="amount"
-                        ${size.priceType === "amount"
-                            ? "selected"
-                            : ""}
-                    >
-                        ₹ Amount
-                    </option>
-
-                    <option
-                        value="percent"
-                        ${size.priceType === "percent"
-                            ? "selected"
-                            : ""}
-                    >
-                        % Percent
-                    </option>
-
-                </select>
-
-
-                <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value="${Number(size.price || 0)}"
-                    placeholder="0"
-                    data-size-price="${index}"
-                >
-
-
-                <button
-                    type="button"
-                    class="remove-btn"
-                    data-remove-size="${index}"
-                >
-                    ×
-                </button>
-
-            </div>
-
-        `).join("");
-
-
-    box.querySelectorAll(
-        "[data-size-name]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            sizes[
-                Number(input.dataset.sizeName)
-            ].name = input.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-size-type]"
-    ).forEach(select => {
-
-        select.onchange = () => {
-
-            sizes[
-                Number(select.dataset.sizeType)
-            ].priceType = select.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-size-price]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            sizes[
-                Number(input.dataset.sizePrice)
-            ].price = Number(
-                input.value || 0
-            );
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-remove-size]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            sizes.splice(
-                Number(
-                    button.dataset.removeSize
-                ),
-                1
-            );
-
-            renderSizes();
-
-        };
-
-    });
-
-}
-
-
-
-/* =====================================================
-   CUSTOM VARIANTS
-===================================================== */
-
-function addVariant(
-    value = null
-) {
-
-    variants.push({
-
-        id:
-            value?.id ||
-            crypto.randomUUID(),
-
-        name:
-            value?.name ||
-            "",
-
-        options:
-            Array.isArray(value?.options)
-                ? structuredClone(
-                    value.options
-                )
-                : []
-
-    });
-
-    renderVariants();
-
-}
-
-
-$("addVariantButton").onclick =
-    () => addVariant();
-
-
-
-function renderVariants() {
-
-    const box =
-        $("variantList");
-
-    if (!variants.length) {
-
-        box.innerHTML = `
-            <div class="empty-small">
-                No custom variants created.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    box.innerHTML =
-        variants.map(
-            (variant, variantIndex) => `
-
-            <div
-                class="variant-card"
-            >
-
-                <div class="variant-card-header">
-
-                    <div>
-
-                        <span class="variant-number">
-                            Variant ${variantIndex + 1}
-                        </span>
-
-                        <input
-                            class="variant-name-input"
-                            value="${esc(variant.name)}"
-                            placeholder="Design"
-                            data-variant-name="${variantIndex}"
-                        >
-
-                    </div>
-
-
-                    <button
-                        type="button"
-                        class="remove-variant-btn"
-                        data-remove-variant="${variantIndex}"
-                    >
-                        Delete Variant
-                    </button>
-
-                </div>
-
-
-                <div
-                    class="variant-options"
-                    data-variant-options="${variantIndex}"
-                >
-
-                    ${renderVariantOptions(
-                        variant,
-                        variantIndex
-                    )}
-
-                </div>
-
-
-                <button
-                    type="button"
-                    class="secondary-btn small-btn"
-                    data-add-option="${variantIndex}"
-                >
-                    + Add Option
-                </button>
-
-            </div>
-
-        `).join("");
-
-
-    box.querySelectorAll(
-        "[data-variant-name]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            variants[
-                Number(
-                    input.dataset.variantName
-                )
-            ].name = input.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-remove-variant]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            variants.splice(
-                Number(
-                    button.dataset.removeVariant
-                ),
-                1
-            );
-
-            renderVariants();
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-add-option]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            const index =
-                Number(
-                    button.dataset.addOption
-                );
-
-            variants[index].options.push({
-
-                id:
-                    crypto.randomUUID(),
-
-                name: "",
-
-                priceType: "amount",
-
-                price: 0
-
-            });
-
-            renderVariants();
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-option-name]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            const v =
-                Number(
-                    input.dataset.variant
-                );
-
-            const o =
-                Number(
-                    input.dataset.option
-                );
-
-            variants[v]
-                .options[o]
-                .name =
-                    input.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-option-type]"
-    ).forEach(select => {
-
-        select.onchange = () => {
-
-            const v =
-                Number(
-                    select.dataset.variant
-                );
-
-            const o =
-                Number(
-                    select.dataset.option
-                );
-
-            variants[v]
-                .options[o]
-                .priceType =
-                    select.value;
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-option-price]"
-    ).forEach(input => {
-
-        input.oninput = () => {
-
-            const v =
-                Number(
-                    input.dataset.variant
-                );
-
-            const o =
-                Number(
-                    input.dataset.option
-                );
-
-            variants[v]
-                .options[o]
-                .price =
-                    Number(
-                        input.value || 0
-                    );
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-remove-option]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            const v =
-                Number(
-                    button.dataset.variant
-                );
-
-            const o =
-                Number(
-                    button.dataset.removeOption
-                );
-
-            variants[v]
-                .options
-                .splice(o, 1);
-
-            renderVariants();
-
-        };
-
-    });
-
-}
-
-
-
-function renderVariantOptions(
-    variant,
-    variantIndex
-) {
-
-    if (!variant.options.length) {
-
-        return `
-            <div class="empty-small">
-                No options yet.
-            </div>
-        `;
-
-    }
-
-
-    return variant.options
-        .map(
-            (option, optionIndex) => `
-
-            <div class="custom-option-row">
-
-                <input
-                    type="text"
-                    value="${esc(option.name)}"
-                    placeholder="Floral"
-                    data-variant="${variantIndex}"
-                    data-option="${optionIndex}"
-                    data-option-name
-                >
-
-
-                <select
-                    data-variant="${variantIndex}"
-                    data-option="${optionIndex}"
-                    data-option-type
-                >
-
-                    <option
-                        value="amount"
-                        ${option.priceType === "amount"
-                            ? "selected"
-                            : ""}
-                    >
-                        ₹
-                    </option>
-
-                    <option
-                        value="percent"
-                        ${option.priceType === "percent"
-                            ? "selected"
-                            : ""}
-                    >
-                        %
-                    </option>
-
-                </select>
-
-
-                <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value="${Number(option.price || 0)}"
-                    placeholder="0"
-                    data-variant="${variantIndex}"
-                    data-option="${optionIndex}"
-                    data-option-price
-                >
-
-
-                <button
-                    type="button"
-                    class="remove-btn"
-                    data-variant="${variantIndex}"
-                    data-remove-option="${optionIndex}"
-                >
-                    ×
-                </button>
-
-            </div>
-
-        `
-        )
-        .join("");
-
-}
-
-
-
-/* =====================================================
-   IMAGE SELECTION
-===================================================== */
-
-$("productImages").addEventListener(
-    "change",
-    event => {
-
-        const files =
-            Array.from(
-                event.target.files || []
-            );
-
-        newImages.push(...files);
-
-        renderImagePreview();
-
-        event.target.value = "";
-
-    }
-);
-
-
-
-function renderImagePreview() {
-
-    const box =
-        $("imagePreview");
-
-    let html = "";
-
-
-    existingImages.forEach(
-        (image, index) => {
-
-            html += `
-
-                <div
-                    class="image-card"
-                    data-existing-image="${index}"
-                >
-
-                    <img
-                        src="${esc(image.url)}"
-                        alt=""
-                    >
-
-                    <span class="saved-label">
-                        Saved
-                    </span>
-
-                </div>
-
-            `;
-
-        }
+        body: JSON.stringify({
+          name,
+          slug
+        })
+      }
     );
 
 
-    newImages.forEach(
-        (file, index) => {
+    message.className =
+      "message success";
 
-            const url =
-                URL.createObjectURL(file);
+    message.textContent =
+      "Category created.";
 
-            html += `
 
-                <div
-                    class="image-card new-image"
-                >
+    await loadCategories();
 
-                    <img
-                        src="${url}"
-                        alt=""
-                    >
 
-                    <span class="new-label">
-                        New
-                    </span>
+    /*
+      If opened from product editor,
+      automatically select new category.
+    */
 
-                    <button
-                        type="button"
-                        class="image-remove-btn"
-                        data-remove-new-image="${index}"
-                    >
-                        ×
-                    </button>
+    const created =
+      state.categories.find(
+        category =>
+          category.name
+            .toLowerCase() ===
+          name.toLowerCase()
+      );
 
-                </div>
 
-            `;
+    if (created) {
 
-        }
+      $("#productCategory")
+        .value =
+          created.id;
+
+    }
+
+
+    setTimeout(
+      closeCategoryModal,
+      400
+    );
+
+  } catch (error) {
+
+    message.className =
+      "message";
+
+    message.textContent =
+      error.message;
+
+  }
+
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getProductImage(product) {
+
+  if (
+    product?.imageUrl
+  ) {
+
+    return product.imageUrl;
+
+  }
+
+
+  const images =
+    getExistingImages(product);
+
+
+  return images[0]?.url || "";
+
+}
+
+
+function getProductCategory(product) {
+
+  const categoryId =
+    product?.data?.categoryId ||
+    product?.data?.category_id;
+
+
+  if (!categoryId) {
+    return "";
+  }
+
+
+  const category =
+    state.categories.find(
+      item =>
+        item.id === categoryId
     );
 
 
-    if (!html) {
-
-        html = `
-            <div class="empty-images">
-                No images selected.
-            </div>
-        `;
-
-    }
-
-
-    box.innerHTML = html;
-
-
-    box.querySelectorAll(
-        "[data-remove-new-image]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            newImages.splice(
-                Number(
-                    button.dataset.removeNewImage
-                ),
-                1
-            );
-
-            renderImagePreview();
-
-        };
-
-    });
+  return category?.name || "";
 
 }
 
 
+function formatMoney(value) {
 
-/* =====================================================
-   PRODUCTS
-===================================================== */
-
-async function loadProducts() {
-
-    products =
-        await api(
-            "/api/admin/products"
-        );
-
-    renderProducts();
+  return Number(
+    value || 0
+  ).toLocaleString(
+    "en-IN",
+    {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }
+  );
 
 }
 
 
-function renderProducts() {
+function slugify(value) {
 
-    const box =
-        $("productList");
-
-    $("productCount").textContent =
-        products.length;
-
-
-    if (!products.length) {
-
-        box.innerHTML = `
-            <div class="empty-products">
-                No products found.
-            </div>
-        `;
-
-        return;
-
-    }
-
-
-    box.innerHTML =
-        products.map(product => {
-
-            const image =
-                product.data?.images?.[0] ||
-                product.imageUrl ||
-                "";
-
-
-            return `
-
-                <div
-                    class="product-list-item"
-                >
-
-                    <div class="product-thumb">
-
-                        ${
-                            image
-                            ? `
-                                <img
-                                    src="${esc(image)}"
-                                    alt=""
-                                >
-                              `
-                            : `
-                                <span>
-                                    IMG
-                                </span>
-                              `
-                        }
-
-                    </div>
-
-
-                    <div class="product-info">
-
-                        <h3>
-                            ${esc(
-                                product.name ||
-                                "Untitled Product"
-                            )}
-                        </h3>
-
-
-                        <div class="product-meta">
-
-                            ₹${money(
-                                product.price
-                            )}
-
-                            ·
-
-                            ${
-                                product.active
-                                ? "Published"
-                                : "Hidden"
-                            }
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="product-actions">
-
-                        <button
-                            class="secondary-btn"
-                            data-edit="${esc(product.id)}"
-                        >
-                            Edit
-                        </button>
-
-
-                        <button
-                            class="duplicate-btn"
-                            data-duplicate="${esc(product.id)}"
-                        >
-                            Duplicate
-                        </button>
-
-
-                        <button
-                            class="delete-btn"
-                            data-delete="${esc(product.id)}"
-                        >
-                            Delete
-                        </button>
-
-                    </div>
-
-                </div>
-
-            `;
-
-        }).join("");
-
-
-    box.querySelectorAll(
-        "[data-edit]"
-    ).forEach(button => {
-
-        button.onclick = () => {
-
-            const product =
-                products.find(
-                    p =>
-                        p.id ===
-                        button.dataset.edit
-                );
-
-            if (product) {
-
-                editProduct(product);
-
-            }
-
-        };
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-duplicate]"
-    ).forEach(button => {
-
-        button.onclick =
-            () =>
-                duplicateProduct(
-                    button.dataset.duplicate
-                );
-
-    });
-
-
-    box.querySelectorAll(
-        "[data-delete]"
-    ).forEach(button => {
-
-        button.onclick =
-            () =>
-                deleteProduct(
-                    button.dataset.delete
-                );
-
-    });
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 }
 
 
+function clone(value) {
 
-/* =====================================================
-   EDIT PRODUCT
-===================================================== */
-
-function editProduct(product) {
-
-    editingId =
-        product.id;
-
-
-    $("formTitle").textContent =
-        "Edit Product";
-
-
-    $("productId").value =
-        product.id;
-
-
-    $("productName").value =
-        product.name || "";
-
-
-    $("productPrice").value =
-        Number(
-            product.price || 0
-        );
-
-
-    $("productDescription").value =
-        product.description || "";
-
-
-    $("productActive").checked =
-        product.active !== false;
-
-
-    const data =
-        product.data || {};
-
-
-    renderCategorySelect(
-        data.categoryId || ""
-    );
-
-
-    colours =
-        structuredClone(
-            data.colours || []
-        );
-
-
-    sizes =
-        structuredClone(
-            data.sizes || []
-        );
-
-
-    variants =
-        structuredClone(
-            data.variants || []
-        );
-
-
-    existingImages =
-        (data.images || [])
-            .map(url => ({
-                url
-            }));
-
-
-    newImages = [];
-
-
-    renderColours();
-
-    renderSizes();
-
-    renderVariants();
-
-    renderImagePreview();
-
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
+  return JSON.parse(
+    JSON.stringify(value)
+  );
 
 }
 
 
+function sleep(ms) {
 
-/* =====================================================
-   NEW PRODUCT
-===================================================== */
-
-function resetForm() {
-
-    editingId = null;
-
-    $("formTitle").textContent =
-        "Add Product";
-
-
-    $("productId").value =
-        "";
-
-
-    $("productName").value =
-        "";
-
-
-    $("productPrice").value =
-        "";
-
-
-    $("productDescription").value =
-        "";
-
-
-    $("productActive").checked =
-        true;
-
-
-    colours = [];
-
-    sizes = [];
-
-    variants = [];
-
-    existingImages = [];
-
-    newImages = [];
-
-
-    renderCategorySelect();
-
-    renderColours();
-
-    renderSizes();
-
-    renderVariants();
-
-    renderImagePreview();
+  return new Promise(
+    resolve =>
+      setTimeout(
+        resolve,
+        ms
+      )
+  );
 
 }
 
 
-$("newProductButton").onclick =
-    resetForm;
-
-
-$("cancelEditButton").onclick =
-    resetForm;
-
-
-
-/* =====================================================
-   DUPLICATE PRODUCT
-===================================================== */
-
-async function duplicateProduct(
-    productId
-) {
-
-    const original =
-        products.find(
-            p =>
-                p.id === productId
-        );
-
-    if (!original) {
-
-        return;
-
-    }
-
-
-    try {
-
-        loading(
-            true,
-            "Duplicating product..."
-        );
-
-
-        const data =
-            structuredClone(
-                original.data || {}
-            );
-
-
-        const body = {
-
-            name:
-                `${original.name || "Product"} (Copy)`,
-
-            slug:
-                slugify(
-                    `${original.name || "product"}-copy`
-                ),
-
-            description:
-                original.description || "",
-
-            price:
-                Number(
-                    original.price || 0
-                ),
-
-            imageUrl:
-                original.imageUrl || "",
-
-            active:
-                original.active !== false,
-
-            data
-
-        };
-
-
-        const result =
-            await api(
-                "/api/admin/products",
-                {
-                    method: "POST",
-
-                    body:
-                        JSON.stringify(body)
-                }
-            );
-
-
-        await loadProducts();
-
-
-        const duplicated =
-            products.find(
-                p =>
-                    p.id === result.id
-            );
-
-
-        if (duplicated) {
-
-            editProduct(
-                duplicated
-            );
-
-        }
-
-
-        toast(
-            "Product duplicated. Now editing the copy."
-        );
-
-    }
-    catch (error) {
-
-        toast(
-            error.message
-        );
-
-    }
-    finally {
-
-        loading(false);
-
-    }
-
-}
-
-
-
-/* =====================================================
-   DELETE
-===================================================== */
-
-async function deleteProduct(
-    id
-) {
-
-    const product =
-        products.find(
-            p =>
-                p.id === id
-        );
-
-
-    if (!product) {
-
-        return;
-
-    }
-
-
-    if (
-        !confirm(
-            `Delete "${product.name}"?`
-        )
-    ) {
-
-        return;
-
-    }
-
-
-    try {
-
-        loading(
-            true,
-            "Deleting product..."
-        );
-
-
-        await api(
-            `/api/admin/products/${id}`,
-            {
-                method: "DELETE"
-            }
-        );
-
-
-        if (editingId === id) {
-
-            resetForm();
-
-        }
-
-
-        await loadProducts();
-
-
-        toast(
-            "Product deleted."
-        );
-
-    }
-    catch (error) {
-
-        toast(
-            error.message
-        );
-
-    }
-    finally {
-
-        loading(false);
-
-    }
-
-}
-
-
-
-/* =====================================================
-   SAVE PRODUCT
-===================================================== */
-
-$("productForm").addEventListener(
-    "submit",
-    async event => {
-
-        event.preventDefault();
-
-
-        const name =
-            $("productName")
-                .value
-                .trim();
-
-
-        const price =
-            Number(
-                $("productPrice").value || 0
-            );
-
-
-        const categoryId =
-            $("productCategory").value;
-
-
-        if (!name) {
-
-            toast(
-                "Product name is required."
-            );
-
-            return;
-
-        }
-
-
-        if (price < 0) {
-
-            toast(
-                "Invalid product price."
-            );
-
-            return;
-
-        }
-
-
-        if (!categoryId) {
-
-            toast(
-                "Please select a category."
-            );
-
-            return;
-
-        }
-
-
-        const cleanColours =
-            colours.filter(
-                c =>
-                    String(c.name || "")
-                        .trim()
-            );
-
-
-        const cleanSizes =
-            sizes.filter(
-                s =>
-                    String(s.name || "")
-                        .trim()
-            );
-
-
-        const cleanVariants =
-            variants
-                .filter(
-                    v =>
-                        String(v.name || "")
-                            .trim()
-                )
-                .map(v => ({
-
-                    ...v,
-
-                    name:
-                        String(
-                            v.name
-                        ).trim(),
-
-                    options:
-                        (v.options || [])
-                            .filter(
-                                o =>
-                                    String(
-                                        o.name || ""
-                                    ).trim()
-                            )
-                            .map(o => ({
-
-                                ...o,
-
-                                name:
-                                    String(
-                                        o.name
-                                    ).trim(),
-
-                                price:
-                                    Number(
-                                        o.price || 0
-                                    )
-
-                            }))
-
-                }));
-
-
-        const body = {
-
-            name,
-
-            slug:
-                slugify(name),
-
-            description:
-                $("productDescription").value,
-
-            price,
-
-            active:
-                $("productActive").checked,
-
-            data: {
-
-                categoryId,
-
-                colours:
-                    cleanColours,
-
-                sizes:
-                    cleanSizes,
-
-                variants:
-                    cleanVariants,
-
-                images:
-                    existingImages.map(
-                        image =>
-                            image.url
-                    )
-
-            }
-
-        };
-
-
-        try {
-
-            $("saveProductButton").disabled =
-                true;
-
-
-            loading(
-                true,
-                editingId
-                    ? "Saving product..."
-                    : "Creating product..."
-            );
-
-
-            let productId =
-                editingId;
-
-
-            if (productId) {
-
-                await api(
-                    `/api/admin/products/${productId}`,
-                    {
-                        method: "PUT",
-
-                        body:
-                            JSON.stringify(body)
-                    }
-                );
-
-            }
-            else {
-
-                const result =
-                    await api(
-                        "/api/admin/products",
-                        {
-                            method: "POST",
-
-                            body:
-                                JSON.stringify(body)
-                        }
-                    );
-
-
-                productId =
-                    result.id;
-
-            }
-
-
-            loading(false);
-
-
-            /*
-               IMPORTANT:
-               Existing product is saved first.
-               New images are uploaded after that.
-            */
-
-
-            if (newImages.length) {
-
-                await uploadImagesWithProgress(
-                    productId
-                );
-
-            }
-
-
-            await loadProducts();
-
-
-            const savedProduct =
-                products.find(
-                    p =>
-                        p.id === productId
-                );
-
-
-            if (savedProduct) {
-
-                editProduct(
-                    savedProduct
-                );
-
-            }
-
-
-            toast(
-                "Product saved successfully."
-            );
-
-        }
-        catch (error) {
-
-            console.error(error);
-
-            toast(
-                error.message ||
-                "Unable to save product."
-            );
-
-        }
-        finally {
-
-            $("saveProductButton").disabled =
-                false;
-
-            loading(false);
-
-        }
-
-    }
-);
-
-
-
-/* =====================================================
-   IMAGE UPLOAD WITH REAL PROGRESS
-===================================================== */
-
-async function uploadImagesWithProgress(
-    productId
-) {
-
-    const total =
-        newImages.length;
-
-
-    $("uploadModal")
-        .classList.remove("hidden");
-
-
-    let completed = 0;
-
-
-    try {
-
-        for (
-            let index = 0;
-            index < total;
-            index++
-        ) {
-
-            const file =
-                newImages[index];
-
-
-            $("uploadImageNumber")
-                .textContent =
-                `${index + 1} / ${total}`;
-
-
-            $("uploadCurrentText")
-                .textContent =
-                `Uploading image ${index + 1} of ${total}`;
-
-
-            $("uploadFileName")
-                .textContent =
-                file.name;
-
-
-            await uploadSingleImage(
-                productId,
-                file,
-                progress => {
-
-                    const overall =
-                        (
-                            (
-                                completed +
-                                progress / 100
-                            )
-                            /
-                            total
-                        ) * 100;
-
-
-                    updateUploadProgress(
-                        overall
-                    );
-
-                }
-            );
-
-
-            completed++;
-
-
-            updateUploadProgress(
-                (completed / total) * 100
-            );
-
-        }
-
-
-        $("uploadCurrentText")
-            .textContent =
-            "All images uploaded";
-
-
-        $("uploadFileName")
-            .textContent =
-            "Upload complete";
-
-
-        $("uploadStatus")
-            .textContent =
-            "✓ Images uploaded successfully";
-
-
-        updateUploadProgress(100);
-
-
-        await new Promise(
-            resolve =>
-                setTimeout(
-                    resolve,
-                    700
-                )
-        );
-
-    }
-    finally {
-
-        $("uploadModal")
-            .classList.add("hidden");
-
-        $("uploadProgress")
-            .style.width =
-            "0%";
-
-        $("uploadPercent")
-            .textContent =
-            "0%";
-
-        $("uploadStatus")
-            .textContent =
-            "";
-
-        newImages = [];
-
-    }
-
-}
-
-
-
-/* =====================================================
-   SINGLE IMAGE XHR
-===================================================== */
-
-function uploadSingleImage(
-    productId,
-    file,
-    onProgress
-) {
-
-    return new Promise(
-        (resolve, reject) => {
-
-            const xhr =
-                new XMLHttpRequest();
-
-
-            xhr.open(
-                "POST",
-                "/api/admin/product-images"
-            );
-
-
-            xhr.withCredentials = true;
-
-
-            xhr.upload.onprogress =
-                event => {
-
-                    if (
-                        event.lengthComputable
-                    ) {
-
-                        const percent =
-                            (
-                                event.loaded /
-                                event.total
-                            ) * 100;
-
-
-                        onProgress(
-                            percent
-                        );
-
-                    }
-
-                };
-
-
-            xhr.onload = () => {
-
-                let data = {};
-
-                try {
-
-                    data =
-                        JSON.parse(
-                            xhr.responseText
-                        );
-
-                }
-                catch {}
-
-
-                if (
-                    xhr.status >= 200 &&
-                    xhr.status < 300
-                ) {
-
-                    resolve(data);
-
-                }
-                else {
-
-                    reject(
-                        new Error(
-                            data.error ||
-                            "Image upload failed."
-                        )
-                    );
-
-                }
-
-            };
-
-
-            xhr.onerror = () => {
-
-                reject(
-                    new Error(
-                        "Network error while uploading image."
-                    )
-                );
-
-            };
-
-
-            const formData =
-                new FormData();
-
-
-            formData.append(
-                "productId",
-                productId
-            );
-
-
-            formData.append(
-                "file",
-                file
-            );
-
-
-            xhr.send(
-                formData
-            );
-
-        }
+/* =========================================================
+   HTML SAFETY
+========================================================= */
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
     );
 
 }
 
 
+function escapeAttr(value) {
 
-/* =====================================================
-   PROGRESS UI
-===================================================== */
-
-function updateUploadProgress(
-    percent
-) {
-
-    percent =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                percent
-            )
-        );
-
-
-    $("uploadProgress")
-        .style.width =
-        `${percent}%`;
-
-
-    $("uploadPercent")
-        .textContent =
-        `${Math.round(percent)}%`;
+  return escapeHtml(value);
 
 }
 
 
+/* =========================================================
+   TOAST
+========================================================= */
 
-/* =====================================================
-   INIT
-===================================================== */
+let toastTimer = null;
 
-boot();
+function toast(
+  message,
+  type = ""
+) {
+
+  const element =
+    $("#toast");
+
+
+  element.textContent =
+    message;
+
+
+  element.className =
+    `toast show ${type}`;
+
+
+  clearTimeout(
+    toastTimer
+  );
+
+
+  toastTimer =
+    setTimeout(
+      () => {
+
+        element.className =
+          "toast";
+
+      },
+      3000
+    );
+
+}
+
+
+/* =========================================================
+   GLOBAL FUNCTIONS
+   Needed by inline product buttons.
+========================================================= */
+
+window.editProduct =
+  editProduct;
+
+window.duplicateProduct =
+  duplicateProduct;
+
+window.deleteProduct =
+  deleteProduct;
