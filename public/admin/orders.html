@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Orders - Imaginary Gifts</title>
+
+<link
+    rel="stylesheet"
+    href="/admin/orders.css"
+>
+
+</head>
+
+<body>
+
+<header class="orders-header">
+
+    <div class="header-left">
+
+        <button
+            type="button"
+            id="backButton"
+            class="icon-button"
+        >
+            ←
+        </button>
+
+        <div>
+            <h1>Orders</h1>
+            <p id="orderCount">
+                Loading orders...
+            </p>
+        </div>
+
+    </div>
+
+    <button
+        type="button"
+        id="refreshButton"
+        class="secondary-button"
+    >
+        ↻ Refresh
+    </button>
+
+</header>
+
+
+<main class="orders-page">
+
+
+    <!-- =========================================
+         FILTERS
+    ========================================== -->
+
+    <section class="control-card">
+
+        <div class="control-title">
+
+            <div>
+                <h2>Order Management</h2>
+
+                <p>
+                    Manage orders and payments
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="filter-grid">
+
+            <div class="filter-field">
+
+                <label for="orderFilter">
+                    Order Status
+                </label>
+
+                <select id="orderFilter">
+
+                    <option value="">
+                        All Orders
+                    </option>
+
+                    <option value="pending">
+                        Pending
+                    </option>
+
+                    <option value="confirmed">
+                        Confirmed
+                    </option>
+
+                    <option value="in_progress">
+                        In Progress
+                    </option>
+
+                    <option value="complete">
+                        Complete
+                    </option>
+
+                    <option value="delivered">
+                        Delivered
+                    </option>
+
+                    <option value="cancelled">
+                        Cancelled
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="filter-field">
+
+                <label for="paymentFilter">
+                    Payment Status
+                </label>
+
+                <select id="paymentFilter">
+
+                    <option value="">
+                        All Payments
+                    </option>
+
+                    <option value="pending">
+                        Pending
+                    </option>
+
+                    <option value="paid">
+                        Paid
+                    </option>
+
+                    <option value="refund">
+                        Refund
+                    </option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================
+             BULK CONTROLS
+        ====================================== -->
+
+        <div class="bulk-section">
+
+            <div class="bulk-row">
+
+                <label class="select-all-label">
+
+                    <input
+                        type="checkbox"
+                        id="selectAll"
+                    >
+
+                    <span>
+                        Select All
+                    </span>
+
+                </label>
+
+
+                <span
+                    id="selectedCount"
+                    class="selected-count"
+                >
+                    0 selected
+                </span>
+
+            </div>
+
+
+            <div class="bulk-grid">
+
+                <div class="bulk-field">
+
+                    <select id="bulkOrderStatus">
+
+                        <option value="">
+                            Order Status
+                        </option>
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
+                        <option value="confirmed">
+                            Confirmed
+                        </option>
+
+                        <option value="in_progress">
+                            In Progress
+                        </option>
+
+                        <option value="complete">
+                            Complete
+                        </option>
+
+                        <option value="delivered">
+                            Delivered
+                        </option>
+
+                        <option value="cancelled">
+                            Cancelled
+                        </option>
+
+                    </select>
+
+                    <button
+                        type="button"
+                        id="applyOrderStatus"
+                        class="gradient-button"
+                    >
+                        Apply
+                    </button>
+
+                </div>
+
+
+                <div class="bulk-field">
+
+                    <select id="bulkPaymentStatus">
+
+                        <option value="">
+                            Payment Status
+                        </option>
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
+                        <option value="paid">
+                            Paid
+                        </option>
+
+                        <option value="refund">
+                            Refund
+                        </option>
+
+                    </select>
+
+                    <button
+                        type="button"
+                        id="applyPaymentStatus"
+                        class="gradient-button"
+                    >
+                        Apply
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================================
+         ORDERS
+    ========================================== -->
+
+    <section id="ordersList" class="orders-list">
+
+        <div class="loading-box">
+
+            <div class="loader"></div>
+
+            <p>
+                Loading orders...
+            </p>
+
+        </div>
+
+    </section>
+
+
+</main>
+
+
+<!-- =========================================
+     EDIT ORDER MODAL
+========================================== -->
+
+<div
+    id="editModal"
+    class="modal hidden"
+>
+
+    <div class="modal-backdrop"></div>
+
+
+    <div class="modal-box">
+
+        <div class="modal-header">
+
+            <div>
+
+                <h2>Edit Order</h2>
+
+                <p id="editOrderId">
+                    Order
+                </p>
+
+            </div>
+
+            <button
+                type="button"
+                id="closeEdit"
+                class="modal-close"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <form id="editForm">
+
+            <input
+                type="hidden"
+                id="editId"
+            >
+
+
+            <!-- CUSTOMER -->
+
+            <div class="edit-section">
+
+                <h3>Customer Details</h3>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Name
+                    </label>
+
+                    <input
+                        id="editCustomerName"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Phone
+                    </label>
+
+                    <input
+                        id="editCustomerPhone"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Address
+                    </label>
+
+                    <textarea
+                        id="editCustomerAddress"
+                        rows="3"
+                        required
+                    ></textarea>
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Pincode
+                    </label>
+
+                    <input
+                        id="editPincode"
+                        required
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- PRODUCT -->
+
+            <div class="edit-section">
+
+                <h3>Product Details</h3>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Product Name
+                    </label>
+
+                    <input
+                        id="editProductName"
+                        required
+                    >
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Product Image URL
+                    </label>
+
+                    <input
+                        id="editProductImage"
+                    >
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Colour
+                    </label>
+
+                    <input
+                        id="editColour"
+                    >
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Size
+                    </label>
+
+                    <input
+                        id="editSize"
+                    >
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Final Price
+                    </label>
+
+                    <input
+                        id="editFinalPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- STATUS -->
+
+            <div class="edit-section">
+
+                <h3>Status</h3>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Order Status
+                    </label>
+
+                    <select id="editOrderStatus">
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
+                        <option value="confirmed">
+                            Confirmed
+                        </option>
+
+                        <option value="in_progress">
+                            In Progress
+                        </option>
+
+                        <option value="complete">
+                            Complete
+                        </option>
+
+                        <option value="delivered">
+                            Delivered
+                        </option>
+
+                        <option value="cancelled">
+                            Cancelled
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div class="form-field">
+
+                    <label>
+                        Payment Status
+                    </label>
+
+                    <select id="editPaymentStatus">
+
+                        <option value="pending">
+                            Pending
+                        </option>
+
+                        <option value="paid">
+                            Paid
+                        </option>
+
+                        <option value="refund">
+                            Refund
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <div class="modal-actions">
+
+                <button
+                    type="button"
+                    id="cancelEdit"
+                    class="secondary-button"
+                >
+                    Cancel
+                </button>
+
+                <button
+                    type="submit"
+                    class="gradient-button"
+                >
+                    Save Changes
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<div
+    id="toast"
+    class="toast"
+></div>
+
+
+<script src="/admin/orders.js"></script>
+
+</body>
+</html>
