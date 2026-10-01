@@ -120,21 +120,17 @@ button {
 
 .brand h1 {
   margin: 0;
-
   font-size: 19px;
 }
 
 .brand p {
   margin: 3px 0 0;
-
   color: #a1a1aa;
-
   font-size: 13px;
 }
 
 .auth-card h2 {
   margin: 0 0 7px;
-
   font-size: 25px;
 }
 
@@ -189,7 +185,6 @@ select {
 
 textarea {
   padding: 12px 13px;
-
   resize: vertical;
 }
 
@@ -222,6 +217,7 @@ select:focus {
 .logout-btn,
 .icon-btn {
   border: 0;
+
   transition:
     transform .15s,
     opacity .15s,
@@ -272,11 +268,9 @@ select:focus {
   padding: 0 14px;
 
   border: 1px solid #3f3f46;
-
   border-radius: 9px;
 
   background: #18181b;
-
   color: #e4e4e7;
 
   font-weight: 600;
@@ -385,7 +379,6 @@ select:focus {
 
 .sidebar-brand strong {
   display: block;
-
   font-size: 14px;
 }
 
@@ -405,7 +398,6 @@ select:focus {
 
 .nav-btn {
   width: 100%;
-
   height: 46px;
 
   display: flex;
@@ -421,7 +413,6 @@ select:focus {
   border-radius: 10px;
 
   background: transparent;
-
   color: #a1a1aa;
 
   text-align: left;
@@ -470,14 +461,12 @@ select:focus {
 
 .logout-btn {
   width: 100%;
-
   height: 42px;
 
   border: 1px solid #3f3f46;
   border-radius: 9px;
 
   background: #18181b;
-
   color: #d4d4d8;
 }
 
@@ -570,7 +559,6 @@ select:focus {
 
 .editor-header h2 {
   margin: 0;
-
   font-size: 19px;
 }
 
@@ -595,7 +583,6 @@ select:focus {
 
 .form-section h3 {
   margin: 0;
-
   font-size: 16px;
 }
 
@@ -666,7 +653,6 @@ select:focus {
 .variant-list {
   display: flex;
   flex-direction: column;
-
   gap: 10px;
 }
 
@@ -717,7 +703,6 @@ select:focus {
 .custom-variants {
   display: flex;
   flex-direction: column;
-
   gap: 15px;
 }
 
@@ -751,7 +736,6 @@ select:focus {
 .option-list {
   display: flex;
   flex-direction: column;
-
   gap: 8px;
 }
 
@@ -810,7 +794,6 @@ select:focus {
 
 .image-drop-zone:hover {
   border-color: #a855f7;
-
   background: #151518;
 }
 
@@ -964,13 +947,11 @@ select:focus {
 .list-header > div:first-child {
   display: flex;
   align-items: center;
-
   gap: 10px;
 }
 
 .list-header h2 {
   margin: 0;
-
   font-size: 17px;
 }
 
@@ -995,7 +976,7 @@ select:focus {
 
 
 /* =========================================================
-   PRODUCTS LIST
+   PRODUCTS LIST — COMPACT
 ========================================================= */
 
 .products-list {
@@ -1007,17 +988,19 @@ select:focus {
   display: grid;
 
   grid-template-columns:
-    75px
+    64px
     minmax(200px, 1fr)
-    150px
-    150px
-    220px;
+    120px
+    105px
+    auto;
 
   align-items: center;
 
-  gap: 15px;
+  gap: 14px;
 
-  padding: 14px 20px;
+  min-height: 88px;
+
+  padding: 10px 16px;
 
   border-bottom: 1px solid #1f1f22;
 }
@@ -1031,12 +1014,12 @@ select:focus {
 }
 
 .product-thumb {
-  width: 65px;
-  height: 65px;
+  width: 60px;
+  height: 60px;
 
   overflow: hidden;
 
-  border-radius: 9px;
+  border-radius: 8px;
 
   border: 1px solid #27272a;
 
@@ -1063,12 +1046,14 @@ select:focus {
 
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  font-size: 14px;
 }
 
 .product-info small {
   display: block;
 
-  margin-top: 5px;
+  margin-top: 3px;
 
   color: #71717a;
 
@@ -1076,11 +1061,14 @@ select:focus {
 
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  font-size: 12px;
 }
 
 .product-price {
   color: #f4f4f5;
   font-weight: 700;
+  font-size: 14px;
 }
 
 .product-status {
@@ -1089,7 +1077,7 @@ select:focus {
 
   width: fit-content;
 
-  padding: 6px 9px;
+  padding: 5px 8px;
 
   border-radius: 20px;
 
@@ -1097,7 +1085,7 @@ select:focus {
 
   color: #86efac;
 
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .product-status.off {
@@ -1109,22 +1097,22 @@ select:focus {
   display: flex;
   justify-content: flex-end;
 
-  gap: 7px;
+  gap: 5px;
 }
 
 .action-btn {
-  height: 36px;
+  height: 32px;
 
-  padding: 0 11px;
+  padding: 0 9px;
 
   border: 1px solid #3f3f46;
-  border-radius: 8px;
+  border-radius: 7px;
 
   background: #18181b;
 
   color: #d4d4d8;
 
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -1142,21 +1130,18 @@ select:focus {
 
 .empty-state {
   padding: 60px 20px;
-
   text-align: center;
-
   color: #71717a;
 }
 
 .empty-state-icon {
   margin-bottom: 10px;
-
   font-size: 35px;
 }
 
 
 /* =========================================================
-   CATEGORIES
+   CATEGORIES — COMPACT
 ========================================================= */
 
 .categories-list {
@@ -1168,15 +1153,19 @@ select:focus {
   display: grid;
 
   grid-template-columns:
-    1fr
-    1fr
-    120px;
+    40px
+    minmax(150px, 1fr)
+    minmax(120px, 1fr)
+    80px
+    auto;
 
   align-items: center;
 
-  gap: 15px;
+  gap: 12px;
 
-  padding: 16px 20px;
+  min-height: 62px;
+
+  padding: 8px 16px;
 
   border-bottom: 1px solid #1f1f22;
 }
@@ -1189,8 +1178,30 @@ select:focus {
   background: #141416;
 }
 
+.category-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+
+  border-radius: 7px;
+
+  color: #a1a1aa;
+
+  cursor: grab;
+
+  font-size: 19px;
+}
+
+.category-drag:active {
+  cursor: grabbing;
+}
+
 .category-name {
   font-weight: 700;
+  font-size: 14px;
 }
 
 .category-slug {
@@ -1198,13 +1209,17 @@ select:focus {
 
   font-family: monospace;
 
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .category-active {
   color: #86efac;
 
-  font-size: 12px;
+  font-size: 11px;
+}
+
+.category-row .action-btn {
+  min-width: 65px;
 }
 
 
@@ -1257,7 +1272,6 @@ select:focus {
 
 .modal-header h2 {
   margin: 0;
-
   font-size: 19px;
 }
 
@@ -1284,7 +1298,6 @@ select:focus {
 
 .upload-modal {
   max-width: 430px;
-
   text-align: center;
 }
 
@@ -1309,13 +1322,11 @@ select:focus {
 
 .upload-modal h2 {
   margin: 0;
-
   font-size: 20px;
 }
 
 .upload-modal p {
   color: #a1a1aa;
-
   font-size: 13px;
 }
 
@@ -1430,7 +1441,6 @@ select:focus {
 
 .toast.show {
   opacity: 1;
-
   transform: translateY(0);
 }
 
@@ -1451,11 +1461,14 @@ select:focus {
 
   .product-row {
     grid-template-columns:
-      65px
-      minmax(160px, 1fr)
-      100px
-      130px;
+      60px
+      minmax(150px, 1fr)
+      90px
+      100px;
 
+    gap: 10px;
+
+    padding: 9px 14px;
   }
 
   .product-actions {
@@ -1466,6 +1479,10 @@ select:focus {
 
 }
 
+
+/* =========================================================
+   TABLET / MOBILE
+========================================================= */
 
 @media (max-width: 800px) {
 
@@ -1501,7 +1518,6 @@ select:focus {
 
   .nav-btn {
     margin: 0;
-
     justify-content: center;
   }
 
@@ -1516,13 +1532,11 @@ select:focus {
 
   .admin-email {
     flex: 1;
-
     margin: 0;
   }
 
   .logout-btn {
     width: auto;
-
     padding: 0 15px;
   }
 
@@ -1531,7 +1545,7 @@ select:focus {
 
     margin-left: 0;
 
-    padding: 20px;
+    padding: 16px;
   }
 
   .form-grid {
@@ -1547,8 +1561,121 @@ select:focus {
       repeat(4, minmax(0, 1fr));
   }
 
+  /* Compact product cards */
+
+  .product-row {
+    grid-template-columns:
+      56px
+      minmax(0, 1fr)
+      auto;
+
+    min-height: 78px;
+
+    gap: 9px;
+
+    padding: 9px 12px;
+  }
+
+  .product-thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .product-info strong {
+    font-size: 13px;
+  }
+
+  .product-info small {
+    font-size: 11px;
+  }
+
+  .product-price {
+    grid-column: 3;
+
+    font-size: 13px;
+
+    align-self: start;
+
+    padding-top: 3px;
+  }
+
+  .product-status {
+    grid-column: 2;
+
+    margin-top: -2px;
+  }
+
+  .product-actions {
+    grid-column: 1 / -1;
+
+    display: flex;
+
+    justify-content: flex-start;
+
+    gap: 6px;
+
+    padding-left: 65px;
+
+    margin-top: -3px;
+  }
+
+  .action-btn {
+    height: 30px;
+
+    padding: 0 10px;
+
+    font-size: 11px;
+  }
+
+  /* Compact categories */
+
+  .category-row {
+    grid-template-columns:
+      34px
+      minmax(0, 1fr)
+      auto;
+
+    min-height: 58px;
+
+    gap: 8px;
+
+    padding: 7px 12px;
+  }
+
+  .category-drag {
+    width: 30px;
+    height: 30px;
+  }
+
+  .category-name {
+    font-size: 13px;
+  }
+
+  .category-slug {
+    font-size: 10px;
+  }
+
+  .category-active {
+    grid-column: 2;
+
+    margin-top: -5px;
+  }
+
+  .category-row .action-btn {
+    grid-column: 3;
+    grid-row: 1 / 3;
+
+    min-width: 60px;
+
+    height: 32px;
+  }
+
 }
 
+
+/* =========================================================
+   SMALL MOBILE
+========================================================= */
 
 @media (max-width: 600px) {
 
@@ -1558,7 +1685,6 @@ select:focus {
 
   .page-header {
     align-items: flex-start;
-
     flex-direction: column;
   }
 
@@ -1598,29 +1724,115 @@ select:focus {
       repeat(3, minmax(0, 1fr));
   }
 
+  /* Extra compact product card */
+
   .product-row {
-    grid-template-columns:
-      60px
-      1fr;
+    min-height: 72px;
+
+    padding: 8px 10px;
+
+    gap: 7px;
   }
 
-  .product-price,
+  .product-thumb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .product-info strong {
+    font-size: 12.5px;
+  }
+
+  .product-info small {
+    margin-top: 2px;
+    font-size: 10.5px;
+  }
+
+  .product-price {
+    font-size: 12px;
+  }
+
   .product-status {
-    grid-column: 2;
+    padding: 4px 7px;
+
+    font-size: 10px;
   }
 
   .product-actions {
-    grid-column: 1 / -1;
+    padding-left: 59px;
+
+    gap: 5px;
   }
+
+  .action-btn {
+    height: 29px;
+
+    padding: 0 8px;
+
+    font-size: 10.5px;
+  }
+
+  /* Extra compact category card */
 
   .category-row {
-    grid-template-columns: 1fr;
+    min-height: 54px;
 
-    gap: 6px;
+    padding: 6px 10px;
+
+    gap: 7px;
   }
 
-  .section-heading {
-    flex-direction: column;
+  .category-drag {
+    width: 28px;
+    height: 28px;
+
+    font-size: 17px;
+  }
+
+  .category-name {
+    font-size: 12.5px;
+  }
+
+  .category-slug {
+    font-size: 9.5px;
+  }
+
+  .category-active {
+    font-size: 10px;
+  }
+
+  .category-row .action-btn {
+    min-width: 56px;
+
+    height: 29px;
+
+    padding: 0 8px;
+
+    font-size: 10px;
+  }
+
+  .list-header {
+    min-height: 65px;
+
+    padding: 12px 14px;
+  }
+
+  .list-header h2 {
+    font-size: 16px;
+  }
+
+  .count-badge {
+    min-width: 23px;
+    height: 23px;
+  }
+
+  .categories-card,
+  .products-card {
+    border-radius: 14px;
+  }
+
+  .empty-state {
+    padding: 45px 15px;
   }
 
 }
