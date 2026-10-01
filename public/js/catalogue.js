@@ -3998,7 +3998,7 @@ ${variantText}
 
 🖼️ *PRODUCT IMAGE*
 
-https://catalogue.imaginarygifts.workers.dev/${data.clickedImage || "Not available"}
+https://catalogue.imaginarygifts.workers.dev${data.clickedImage || "Not available"}
 
 ━━━━━━━━━━━━━━━━━━
 
