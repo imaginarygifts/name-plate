@@ -49,7 +49,6 @@ function b64(bytes) {
 
 
 function unb64(s) {
-
   s = s
     .replace(/-/g, "+")
     .replace(/_/g, "/");
@@ -72,7 +71,6 @@ function unb64(s) {
 ========================================================= */
 
 async function sha256(value) {
-
   const data =
     typeof value === "string"
       ? new TextEncoder().encode(value)
@@ -91,7 +89,6 @@ async function derivePassword(
   password,
   saltB64
 ) {
-
   const salt =
     unb64(saltB64);
 
@@ -120,10 +117,7 @@ async function derivePassword(
 }
 
 
-async function hashPassword(
-  password
-) {
-
+async function hashPassword(password) {
   const salt =
     new Uint8Array(16);
 
@@ -151,26 +145,18 @@ function parseJSON(
   value,
   fallback
 ) {
-
   try {
-
     return JSON.parse(
       value ?? ""
     );
-
   } catch {
-
     return fallback;
-
   }
-
 }
 
 
 function cleanProduct(row) {
-
   return {
-
     id: row.id,
 
     name: row.name,
@@ -195,20 +181,14 @@ function cleanProduct(row) {
         row.data_json,
         {}
       )
-
   };
-
 }
 
 
-function mediaUrl(
-  objectKey
-) {
-
+function mediaUrl(objectKey) {
   return `/media/${encodeURIComponent(
     objectKey
   )}`;
-
 }
 
 
@@ -220,7 +200,6 @@ async function adminFromRequest(
   request,
   env
 ) {
-
   const cookie =
     request.headers.get(
       "cookie"
@@ -262,7 +241,6 @@ async function adminFromRequest(
       .first();
 
   return row || null;
-
 }
 
 
@@ -274,7 +252,6 @@ async function api(
   request,
   env
 ) {
-
   const url =
     new URL(request.url);
 
@@ -290,13 +267,11 @@ async function api(
     path === "/api/health" &&
     request.method === "GET"
   ) {
-
     return json({
       ok: true,
       service: "catalogue-api",
       time: now()
     });
-
   }
 
 
@@ -308,7 +283,6 @@ async function api(
     path === "/api/products" &&
     request.method === "GET"
   ) {
-
     const rows =
       await env.DB.prepare(`
         SELECT *
@@ -316,7 +290,6 @@ async function api(
         WHERE active = 1
         ORDER BY name ASC
       `).all();
-
 
     return json(
       rows.results.map(
@@ -328,7 +301,6 @@ async function api(
           "public, max-age=30"
       }
     );
-
   }
 
 
@@ -341,12 +313,10 @@ async function api(
       /^\/api\/products\/([^/]+)$/
     );
 
-
   if (
     publicProduct &&
     request.method === "GET"
   ) {
-
     const product =
       await env.DB.prepare(`
         SELECT *
@@ -359,9 +329,7 @@ async function api(
         )
         .first();
 
-
     if (!product) {
-
       return json(
         {
           error:
@@ -369,9 +337,7 @@ async function api(
         },
         404
       );
-
     }
-
 
     return json(
       cleanProduct(product),
@@ -381,7 +347,6 @@ async function api(
           "public, max-age=30"
       }
     );
-
   }
 
 
@@ -393,7 +358,6 @@ async function api(
     path === "/api/setup" &&
     request.method === "POST"
   ) {
-
     const body =
       await request
         .json()
@@ -401,13 +365,11 @@ async function api(
           () => ({})
         );
 
-
     if (
       !env.SETUP_KEY ||
       body.setupKey !==
         env.SETUP_KEY
     ) {
-
       return json(
         {
           error:
@@ -415,18 +377,14 @@ async function api(
         },
         403
       );
-
     }
-
 
     const existing =
       await env.DB.prepare(
         "SELECT id FROM admins LIMIT 1"
       ).first();
 
-
     if (existing) {
-
       return json(
         {
           error:
@@ -434,9 +392,7 @@ async function api(
         },
         409
       );
-
     }
-
 
     const email =
       String(
@@ -445,18 +401,15 @@ async function api(
         .trim()
         .toLowerCase();
 
-
     const password =
       String(
         body.password || ""
       );
 
-
     if (
       !email ||
       password.length < 8
     ) {
-
       return json(
         {
           error:
@@ -464,19 +417,15 @@ async function api(
         },
         400
       );
-
     }
-
 
     const hp =
       await hashPassword(
         password
       );
 
-
     const adminId =
       id();
-
 
     await env.DB.prepare(`
       INSERT INTO admins
@@ -498,7 +447,6 @@ async function api(
       )
       .run();
 
-
     return json(
       {
         ok: true,
@@ -507,7 +455,6 @@ async function api(
       },
       201
     );
-
   }
 
 
@@ -519,14 +466,12 @@ async function api(
     path === "/api/login" &&
     request.method === "POST"
   ) {
-
     const body =
       await request
         .json()
         .catch(
           () => ({})
         );
-
 
     const email =
       String(
@@ -535,12 +480,10 @@ async function api(
         .trim()
         .toLowerCase();
 
-
     const password =
       String(
         body.password || ""
       );
-
 
     const admin =
       await env.DB.prepare(`
@@ -551,9 +494,7 @@ async function api(
         .bind(email)
         .first();
 
-
     if (!admin) {
-
       return json(
         {
           error:
@@ -561,9 +502,7 @@ async function api(
         },
         401
       );
-
     }
-
 
     const check =
       await derivePassword(
@@ -571,12 +510,10 @@ async function api(
         admin.salt
       );
 
-
     if (
       check !==
       admin.password_hash
     ) {
-
       return json(
         {
           error:
@@ -584,26 +521,20 @@ async function api(
         },
         401
       );
-
     }
-
 
     const tokenBytes =
       new Uint8Array(32);
-
 
     crypto.getRandomValues(
       tokenBytes
     );
 
-
     const token =
       b64(tokenBytes);
 
-
     const tokenHash =
       await sha256(token);
-
 
     const expires =
       now() +
@@ -612,7 +543,6 @@ async function api(
       60 *
       60 *
       1000;
-
 
     await env.DB.prepare(`
       INSERT INTO sessions
@@ -632,7 +562,6 @@ async function api(
       )
       .run();
 
-
     return json(
       {
         ok: true,
@@ -647,7 +576,6 @@ async function api(
           )}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
       }
     );
-
   }
 
 
@@ -659,30 +587,24 @@ async function api(
     path === "/api/logout" &&
     request.method === "POST"
   ) {
-
     const cookie =
       request.headers.get(
         "cookie"
       ) || "";
-
 
     const match =
       cookie.match(
         /(?:^|;\s*)cf_admin=([^;]+)/
       );
 
-
     if (match) {
-
       const token =
         decodeURIComponent(
           match[1]
         );
 
-
       const tokenHash =
         await sha256(token);
-
 
       await env.DB.prepare(`
         DELETE FROM sessions
@@ -690,9 +612,7 @@ async function api(
       `)
         .bind(tokenHash)
         .run();
-
     }
-
 
     return json(
       {
@@ -704,7 +624,6 @@ async function api(
           "cf_admin=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
       }
     );
-
   }
 
 
@@ -716,55 +635,43 @@ async function api(
     path === "/api/me" &&
     request.method === "GET"
   ) {
-
     const admin =
       await adminFromRequest(
         request,
         env
       );
 
-
     if (!admin) {
-
       return json(
         {
           loggedIn: false
         },
         401
       );
-
     }
-
 
     return json({
       loggedIn: true,
       email:
         admin.email
     });
-
   }
 
 
   /* =======================================================
      NEW USER / ADMIN REGISTRATION
-     
-     NOTE:
-     This is intentionally open because you requested
-     a "New User" button.
   ======================================================= */
 
   if (
     path === "/api/register" &&
     request.method === "POST"
   ) {
-
     const body =
       await request
         .json()
         .catch(
           () => ({})
         );
-
 
     const email =
       String(
@@ -773,15 +680,12 @@ async function api(
         .trim()
         .toLowerCase();
 
-
     const password =
       String(
         body.password || ""
       );
 
-
     if (!email) {
-
       return json(
         {
           error:
@@ -789,14 +693,11 @@ async function api(
         },
         400
       );
-
     }
-
 
     if (
       password.length < 8
     ) {
-
       return json(
         {
           error:
@@ -804,9 +705,7 @@ async function api(
         },
         400
       );
-
     }
-
 
     const existing =
       await env.DB.prepare(`
@@ -817,9 +716,7 @@ async function api(
         .bind(email)
         .first();
 
-
     if (existing) {
-
       return json(
         {
           error:
@@ -827,19 +724,15 @@ async function api(
         },
         409
       );
-
     }
-
 
     const hp =
       await hashPassword(
         password
       );
 
-
     const adminId =
       id();
-
 
     await env.DB.prepare(`
       INSERT INTO admins
@@ -861,7 +754,6 @@ async function api(
       )
       .run();
 
-
     return json(
       {
         ok: true,
@@ -870,7 +762,6 @@ async function api(
       },
       201
     );
-
   }
 
 
@@ -884,9 +775,7 @@ async function api(
       env
     );
 
-
   if (!admin) {
-
     return json(
       {
         error:
@@ -894,7 +783,176 @@ async function api(
       },
       401
     );
+  }
 
+
+  /* =======================================================
+     ADMIN - CATEGORIES
+  ======================================================= */
+
+  if (
+    path === "/api/admin/categories" &&
+    request.method === "GET"
+  ) {
+    const rows =
+      await env.DB.prepare(`
+        SELECT
+          id,
+          name,
+          slug,
+          active,
+          created_at,
+          updated_at
+        FROM categories
+        WHERE active = 1
+        ORDER BY name ASC
+      `).all();
+
+    return json(
+      rows.results.map(row => ({
+        id: row.id,
+        name: row.name,
+        slug: row.slug,
+        active: Boolean(row.active),
+        created_at: row.created_at,
+        updated_at: row.updated_at
+      }))
+    );
+  }
+
+
+  if (
+    path === "/api/admin/categories" &&
+    request.method === "POST"
+  ) {
+    const body =
+      await request
+        .json()
+        .catch(
+          () => ({})
+        );
+
+    const name =
+      String(
+        body.name || ""
+      ).trim();
+
+    if (!name) {
+      return json(
+        {
+          error:
+            "Category name is required."
+        },
+        400
+      );
+    }
+
+    let slug =
+      String(
+        body.slug || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    if (!slug) {
+      slug =
+        name
+          .toLowerCase()
+          .replace(
+            /[^a-z0-9]+/g,
+            "-"
+          )
+          .replace(
+            /^-+|-+$/g,
+            ""
+          );
+    }
+
+    if (!slug) {
+      return json(
+        {
+          error:
+            "Invalid category name."
+        },
+        400
+      );
+    }
+
+    const existing =
+      await env.DB.prepare(`
+        SELECT id
+        FROM categories
+        WHERE
+          lower(name) = lower(?)
+          OR lower(slug) = lower(?)
+        LIMIT 1
+      `)
+        .bind(
+          name,
+          slug
+        )
+        .first();
+
+    if (existing) {
+      return json(
+        {
+          error:
+            "Category already exists."
+        },
+        409
+      );
+    }
+
+    const categoryId =
+      id();
+
+    const timestamp =
+      now();
+
+    await env.DB.prepare(`
+      INSERT INTO categories
+      (
+        id,
+        name,
+        slug,
+        active,
+        created_at,
+        updated_at
+      )
+      VALUES (?, ?, ?, 1, ?, ?)
+    `)
+      .bind(
+        categoryId,
+        name,
+        slug,
+        timestamp,
+        timestamp
+      )
+      .run();
+
+    return json(
+      {
+        ok: true,
+
+        category: {
+          id:
+            categoryId,
+
+          name,
+
+          slug,
+
+          active: 1,
+
+          created_at:
+            timestamp,
+
+          updated_at:
+            timestamp
+        }
+      },
+      201
+    );
   }
 
 
@@ -906,7 +964,6 @@ async function api(
     path === "/api/admin/products" &&
     request.method === "GET"
   ) {
-
     const rows =
       await env.DB.prepare(`
         SELECT *
@@ -914,13 +971,11 @@ async function api(
         ORDER BY name ASC
       `).all();
 
-
     return json(
       rows.results.map(
         cleanProduct
       )
     );
-
   }
 
 
@@ -932,7 +987,6 @@ async function api(
     path === "/api/admin/products" &&
     request.method === "POST"
   ) {
-
     const body =
       await request
         .json()
@@ -940,23 +994,18 @@ async function api(
           () => ({})
         );
 
-
     const productId =
       id();
 
-
     const timestamp =
       now();
-
 
     const name =
       String(
         body.name || ""
       ).trim();
 
-
     if (!name) {
-
       return json(
         {
           error:
@@ -964,9 +1013,7 @@ async function api(
         },
         400
       );
-
     }
-
 
     const data =
       body.data &&
@@ -974,21 +1021,13 @@ async function api(
         ? body.data
         : {};
 
-
-    /*
-      Always create an images array.
-    */
-
     if (
       !Array.isArray(
         data.images
       )
     ) {
-
       data.images = [];
-
     }
-
 
     await env.DB.prepare(`
       INSERT INTO products
@@ -1008,28 +1047,36 @@ async function api(
     `)
       .bind(
         productId,
+
         name,
+
         String(
           body.slug || ""
         ).trim(),
+
         String(
           body.description || ""
         ),
+
         Number(
           body.price || 0
         ),
+
         "",
+
         body.active === false
           ? 0
           : 1,
+
         JSON.stringify(
           data
         ),
+
         timestamp,
+
         timestamp
       )
       .run();
-
 
     return json(
       {
@@ -1039,7 +1086,6 @@ async function api(
       },
       201
     );
-
   }
 
 
@@ -1057,10 +1103,8 @@ async function api(
     productRoute &&
     request.method === "PUT"
   ) {
-
     const productId =
       productRoute[1];
-
 
     const oldProduct =
       await env.DB.prepare(`
@@ -1073,9 +1117,7 @@ async function api(
         )
         .first();
 
-
     if (!oldProduct) {
-
       return json(
         {
           error:
@@ -1083,9 +1125,7 @@ async function api(
         },
         404
       );
-
     }
-
 
     const body =
       await request
@@ -1094,13 +1134,11 @@ async function api(
           () => ({})
         );
 
-
     const oldData =
       parseJSON(
         oldProduct.data_json,
         {}
       );
-
 
     const newData =
       body.data &&
@@ -1108,27 +1146,18 @@ async function api(
         ? body.data
         : {};
 
-
-    /*
-      IMPORTANT:
-      Preserve existing R2 images.
-    */
-
     if (
       !Array.isArray(
         newData.images
       )
     ) {
-
       newData.images =
         Array.isArray(
           oldData.images
         )
           ? oldData.images
           : [];
-
     }
-
 
     const imageUrl =
       body.imageUrl !== undefined
@@ -1140,7 +1169,6 @@ async function api(
             newData.images[0] ||
             ""
           );
-
 
     await env.DB.prepare(`
       UPDATE products
@@ -1195,25 +1223,20 @@ async function api(
       )
       .run();
 
-
     return json({
       ok: true
     });
-
   }
 
 
   /* =======================================================
      ADMIN - DELETE PRODUCT
-     
-     Also removes its R2 images.
   ======================================================= */
 
   if (
     productRoute &&
     request.method === "DELETE"
   ) {
-
     const product =
       await env.DB.prepare(`
         SELECT *
@@ -1225,9 +1248,7 @@ async function api(
         )
         .first();
 
-
     if (!product) {
-
       return json(
         {
           error:
@@ -1235,16 +1256,13 @@ async function api(
         },
         404
       );
-
     }
-
 
     const data =
       parseJSON(
         product.data_json,
         {}
       );
-
 
     const images =
       Array.isArray(
@@ -1253,34 +1271,22 @@ async function api(
         ? data.images
         : [];
 
-
-    /*
-      Delete R2 files.
-    */
-
     for (
       const image of images
     ) {
-
       if (
         typeof image !== "string"
       ) {
-
         continue;
-
       }
-
 
       if (
         !image.startsWith(
           "/media/"
         )
       ) {
-
         continue;
-
       }
-
 
       const objectKey =
         decodeURIComponent(
@@ -1289,24 +1295,17 @@ async function api(
           )
         );
 
-
       try {
-
         await env.MEDIA.delete(
           objectKey
         );
-
       } catch (e) {
-
         console.error(
           "R2 delete failed:",
           e
         );
-
       }
-
     }
-
 
     await env.DB.prepare(`
       DELETE FROM products
@@ -1317,11 +1316,9 @@ async function api(
       )
       .run();
 
-
     return json({
       ok: true
     });
-
   }
 
 
@@ -1334,10 +1331,8 @@ async function api(
       "/api/admin/product-images" &&
     request.method === "POST"
   ) {
-
     const form =
       await request.formData();
-
 
     const productId =
       String(
@@ -1346,15 +1341,15 @@ async function api(
         ) || ""
       );
 
+    /*
+      Accept both "file" and "image".
+    */
 
     const file =
-      form.get(
-        "file"
-      );
-
+      form.get("file") ||
+      form.get("image");
 
     if (!productId) {
-
       return json(
         {
           error:
@@ -1362,14 +1357,11 @@ async function api(
         },
         400
       );
-
     }
-
 
     if (
       !(file instanceof File)
     ) {
-
       return json(
         {
           error:
@@ -1377,13 +1369,7 @@ async function api(
         },
         400
       );
-
     }
-
-
-    /*
-      Check product.
-    */
 
     const product =
       await env.DB.prepare(`
@@ -1396,9 +1382,7 @@ async function api(
         )
         .first();
 
-
     if (!product) {
-
       return json(
         {
           error:
@@ -1406,13 +1390,7 @@ async function api(
         },
         404
       );
-
     }
-
-
-    /*
-      Basic image validation.
-    */
 
     const allowedTypes =
       [
@@ -1423,13 +1401,11 @@ async function api(
         "image/avif"
       ];
 
-
     if (
       !allowedTypes.includes(
         file.type
       )
     ) {
-
       return json(
         {
           error:
@@ -1437,19 +1413,12 @@ async function api(
         },
         400
       );
-
     }
-
-
-    /*
-      Maximum 10 MB per image.
-    */
 
     if (
       file.size >
       10 * 1024 * 1024
     ) {
-
       return json(
         {
           error:
@@ -1457,13 +1426,7 @@ async function api(
         },
         400
       );
-
     }
-
-
-    /*
-      Extension.
-    */
 
     let ext =
       (
@@ -1478,56 +1441,35 @@ async function api(
         )
         .toLowerCase();
 
-
     if (!ext) {
-
       ext =
         file.type ===
         "image/jpeg"
           ? "jpg"
           : "bin";
-
     }
-
-
-    /*
-      R2 object key.
-    */
 
     const objectKey =
       `products/${productId}/${crypto.randomUUID()}.${ext}`;
-
-
-    /*
-      Upload directly to R2.
-    */
 
     await env.MEDIA.put(
       objectKey,
       file.stream(),
       {
         httpMetadata: {
-
           contentType:
             file.type,
 
           cacheControl:
             "public, max-age=31536000, immutable"
-
         }
       }
     );
-
 
     const imageUrl =
       mediaUrl(
         objectKey
       );
-
-
-    /*
-      Read existing data.
-    */
 
     const data =
       parseJSON(
@@ -1535,36 +1477,21 @@ async function api(
         {}
       );
 
-
     if (
       !Array.isArray(
         data.images
       )
     ) {
-
       data.images = [];
-
     }
-
-
-    /*
-      Add new image.
-    */
 
     data.images.push(
       imageUrl
     );
 
-
-    /*
-      First image becomes
-      product image.
-    */
-
     const mainImage =
       product.image_url ||
       imageUrl;
-
 
     await env.DB.prepare(`
       UPDATE products
@@ -1576,14 +1503,16 @@ async function api(
     `)
       .bind(
         mainImage,
+
         JSON.stringify(
           data
         ),
+
         now(),
+
         productId
       )
       .run();
-
 
     return json(
       {
@@ -1596,7 +1525,6 @@ async function api(
       },
       201
     );
-
   }
 
 
@@ -1609,21 +1537,17 @@ async function api(
       /^\/api\/admin\/product-images\/(.+)$/
     );
 
-
   if (
     productImageDelete &&
     request.method === "DELETE"
   ) {
-
     const encodedKey =
       productImageDelete[1];
-
 
     const objectKey =
       decodeURIComponent(
         encodedKey
       );
-
 
     const productId =
       String(
@@ -1634,9 +1558,7 @@ async function api(
         ) || ""
       );
 
-
     if (!productId) {
-
       return json(
         {
           error:
@@ -1644,9 +1566,7 @@ async function api(
         },
         400
       );
-
     }
-
 
     const product =
       await env.DB.prepare(`
@@ -1659,9 +1579,7 @@ async function api(
         )
         .first();
 
-
     if (!product) {
-
       return json(
         {
           error:
@@ -1669,16 +1587,13 @@ async function api(
         },
         404
       );
-
     }
-
 
     const data =
       parseJSON(
         product.data_json,
         {}
       );
-
 
     data.images =
       Array.isArray(
@@ -1693,15 +1608,12 @@ async function api(
           )
         : [];
 
-
     await env.MEDIA.delete(
       objectKey
     );
 
-
     const newMainImage =
       data.images[0] || "";
-
 
     await env.DB.prepare(`
       UPDATE products
@@ -1713,19 +1625,20 @@ async function api(
     `)
       .bind(
         newMainImage,
+
         JSON.stringify(
           data
         ),
+
         now(),
+
         productId
       )
       .run();
 
-
     return json({
       ok: true
     });
-
   }
 
 
@@ -1737,7 +1650,6 @@ async function api(
     path === "/api/orders" &&
     request.method === "POST"
   ) {
-
     const body =
       await request
         .json()
@@ -1745,74 +1657,61 @@ async function api(
           () => ({})
         );
 
-
     const customer =
       body.customer || {};
 
-
     const product =
       body.product || {};
-
 
     const customerName =
       String(
         customer.name || ""
       ).trim();
 
-
     const customerPhone =
       String(
         customer.phone || ""
       ).trim();
-
 
     const address =
       String(
         customer.address || ""
       ).trim();
 
-
     const pincode =
       String(
         customer.pincode || ""
       ).trim();
-
 
     const productId =
       String(
         product.id || ""
       ).trim();
 
-
     const productName =
       String(
         product.name || ""
       ).trim();
-
 
     const productImage =
       String(
         product.image || ""
       ).trim();
 
-
     const colour =
       String(
         product.colour || ""
       ).trim();
-
 
     const size =
       String(
         product.size || ""
       ).trim();
 
-
     const price =
       Number(
         product.price || 0
       );
-
 
     if (
       !customerName ||
@@ -1822,7 +1721,6 @@ async function api(
       !productId ||
       !productName
     ) {
-
       return json(
         {
           error:
@@ -1830,14 +1728,7 @@ async function api(
         },
         400
       );
-
     }
-
-
-    /*
-      Make sure the product
-      actually exists.
-    */
 
     const realProduct =
       await env.DB.prepare(`
@@ -1851,9 +1742,7 @@ async function api(
         )
         .first();
 
-
     if (!realProduct) {
-
       return json(
         {
           error:
@@ -1861,9 +1750,7 @@ async function api(
         },
         400
       );
-
     }
-
 
     const orderId =
       "IG-" +
@@ -1875,15 +1762,8 @@ async function api(
         .slice(0, 6)
         .toUpperCase();
 
-
     const createdAt =
       now();
-
-
-    /*
-      IMPORTANT:
-      The orders table must exist.
-    */
 
     await env.DB.prepare(`
       INSERT INTO orders
@@ -1921,7 +1801,6 @@ async function api(
       )
       .run();
 
-
     return json(
       {
         ok: true,
@@ -1929,7 +1808,6 @@ async function api(
       },
       201
     );
-
   }
 
 
@@ -1941,7 +1819,6 @@ async function api(
     path === "/api/admin/orders" &&
     request.method === "GET"
   ) {
-
     const rows =
       await env.DB.prepare(`
         SELECT *
@@ -1949,11 +1826,9 @@ async function api(
         ORDER BY created_at DESC
       `).all();
 
-
     return json(
       rows.results
     );
-
   }
 
 
@@ -1966,12 +1841,10 @@ async function api(
       /^\/api\/admin\/orders\/([^/]+)$/
     );
 
-
   if (
     orderRoute &&
     request.method === "PUT"
   ) {
-
     const body =
       await request
         .json()
@@ -1979,12 +1852,10 @@ async function api(
           () => ({})
         );
 
-
     const status =
       String(
         body.status || "new"
       );
-
 
     const allowed =
       [
@@ -1996,13 +1867,11 @@ async function api(
         "cancelled"
       ];
 
-
     if (
       !allowed.includes(
         status
       )
     ) {
-
       return json(
         {
           error:
@@ -2010,9 +1879,7 @@ async function api(
         },
         400
       );
-
     }
-
 
     await env.DB.prepare(`
       UPDATE orders
@@ -2025,26 +1892,20 @@ async function api(
       )
       .run();
 
-
     return json({
       ok: true
     });
-
   }
 
 
   /* =======================================================
      OLD CATALOGUE API
-     
-     Kept so existing catalogue data
-     doesn't suddenly stop working.
   ======================================================= */
 
   if (
     path === "/api/catalogues" &&
     request.method === "GET"
   ) {
-
     const rows =
       await env.DB.prepare(`
         SELECT c.*,
@@ -2059,7 +1920,6 @@ async function api(
           c.display_order ASC,
           c.created_at ASC
       `).all();
-
 
     return json(
       rows.results.map(
@@ -2094,7 +1954,6 @@ async function api(
         })
       )
     );
-
   }
 
 
@@ -2109,7 +1968,6 @@ async function api(
     },
     404
   );
-
 }
 
 
@@ -2124,23 +1982,19 @@ export default {
     env,
     ctx
   ) {
-
     const url =
       new URL(
         request.url
       );
 
 
-    /*
-      API
-    */
+    /* API */
 
     if (
       url.pathname.startsWith(
         "/api/"
       )
     ) {
-
       try {
 
         return await api(
@@ -2162,22 +2016,17 @@ export default {
           },
           500
         );
-
       }
-
     }
 
 
-    /*
-      R2 media
-    */
+    /* R2 MEDIA */
 
     if (
       url.pathname.startsWith(
         "/media/"
       )
     ) {
-
       const key =
         decodeURIComponent(
           url.pathname.slice(
@@ -2185,43 +2034,34 @@ export default {
           )
         );
 
-
       const object =
         await env.MEDIA.get(
           key
         );
 
-
       if (!object) {
-
         return text(
           "Not found",
           404
         );
-
       }
-
 
       const headers =
         new Headers();
 
-
       object.writeHttpMetadata(
         headers
       );
-
 
       headers.set(
         "etag",
         object.httpEtag
       );
 
-
       headers.set(
         "cache-control",
         "public, max-age=31536000, immutable"
       );
-
 
       return new Response(
         object.body,
@@ -2229,18 +2069,14 @@ export default {
           headers
         }
       );
-
     }
 
 
-    /*
-      Website files
-    */
+    /* WEBSITE FILES */
 
     return env.ASSETS.fetch(
       request
     );
-
   }
 
 };
