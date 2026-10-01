@@ -1,2719 +1,1200 @@
 /* =========================================================
-   IMAGINARY GIFTS FRONTEND
-========================================================= */
-
-
-/* =========================================================
-   CONFIG
-========================================================= */
+   IMAGINARY GIFTS - CATALOGUE FRONTEND
+   ========================================================= */
 
 const CONFIG = {
-
-  /*
-    Replace with your WhatsApp number.
-
-    Example:
-    919876543210
-
-    No +, spaces or hyphens.
-  */
-
-  whatsappNumber:
-    "919730157585"
-
+  // CHANGE THIS TO YOUR WHATSAPP BUSINESS NUMBER
+  // Example: 919876543210
+  whatsappNumber: "919730157585"
 };
 
 
 /* =========================================================
    STATE
-========================================================= */
+   ========================================================= */
 
 const state = {
-
   products: [],
-
   categories: [],
 
   selectedCategory: "",
 
   selectedProduct: null,
-
   selectedImageIndex: 0,
+  productViewOpen: false,
 
-  selectedVariants: {},
+  // Product ID => {
+  //   groupId: optionId
+  // }
+  variantSelections: {},
 
+  // Current order
   orderProduct: null,
+  orderImageIndex: 0,
+  orderSelections: {},
 
-  /*
-    true when customer is viewing
-    a single product page.
-  */
-
-  productViewOpen: false
-
+  orderId: null
 };
 
 
 /* =========================================================
    BASIC HELPERS
-========================================================= */
+   ========================================================= */
 
-const $ = selector =>
-  document.querySelector(selector);
+const $ = (selector, parent = document) =>
+  parent.querySelector(selector);
 
-
-function formatMoney(value) {
-
-  return Number(
-    value || 0
-  ).toLocaleString(
-    "en-IN",
-    {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2
-    }
-  );
-
-}
-
+const $$ = (selector, parent = document) =>
+  [...parent.querySelectorAll(selector)];
 
 function escapeHtml(value) {
-
-  return String(
-    value ?? ""
-  )
-    .replace(
-      /&/g,
-      "&amp;"
-    )
-    .replace(
-      /</g,
-      "&lt;"
-    )
-    .replace(
-      />/g,
-      "&gt;"
-    )
-    .replace(
-      /"/g,
-      "&quot;"
-    )
-    .replace(
-      /'/g,
-      "&#039;"
-    );
-
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-
-function escapeAttr(value) {
-
-  return escapeHtml(
-    value
-  );
-
+function money(value) {
+  return `₹${Number(value || 0).toLocaleString("en-IN")}`;
 }
 
-
-function clone(value) {
-
-  return JSON.parse(
-    JSON.stringify(
-      value
-    )
-  );
-
+function getProductData(product) {
+  return product?.data || {};
 }
 
+function getProductImage(product, index = 0) {
+  const data = getProductData(product);
 
-/* =========================================================
-   GET PRODUCT IMAGES
-========================================================= */
+  const images = Array.isArray(data.images)
+    ? data.images
+    : [];
 
-function getImages(product) {
-
-  const images =
-    product?.data?.images;
-
-
-  if (
-    !Array.isArray(images)
-  ) {
-
-    return [];
-
+  if (!images.length) {
+    return product?.imageUrl || "";
   }
 
+  const image = images[index];
+
+  if (!image) {
+    return "";
+  }
+
+  if (typeof image === "string") {
+    return image;
+  }
+
+  return (
+    image.url ||
+    image.imageUrl ||
+    image.objectKey ||
+    image.key ||
+    ""
+  );
+}
+
+function getProductImages(product) {
+  const data = getProductData(product);
+
+  const images = Array.isArray(data.images)
+    ? data.images
+    : [];
+
+  if (!images.length) {
+    return product?.imageUrl
+      ? [product.imageUrl]
+      : [];
+  }
 
   return images
-    .map(item => {
-
-      if (
-        typeof item ===
-        "string"
-      ) {
-
-        return {
-          url: item,
-          key: ""
-        };
-
+    .map((image) => {
+      if (typeof image === "string") {
+        return image;
       }
 
-
-      return {
-
-        url:
-          item.url ||
-          item.imageUrl ||
-          "",
-
-        key:
-          item.key ||
-          item.objectKey ||
-          ""
-
-      };
-
+      return (
+        image.url ||
+        image.imageUrl ||
+        image.objectKey ||
+        image.key ||
+        ""
+      );
     })
-    .filter(
-      item =>
-        item.url
-    );
-
+    .filter(Boolean);
 }
 
 
 /* =========================================================
-   CATEGORY
-========================================================= */
+   VARIANT HELPERS
+   ========================================================= */
 
-function getProductCategoryId(
-  product
-) {
+function normalizeVariantGroup(group, index) {
+  if (!group) return null;
 
-  return (
-    product?.data?.categoryId ||
-    product?.data?.category_id ||
-    ""
-  );
-
-}
-
-
-function getCategoryName(
-  categoryId
-) {
-
-  const category =
-    state.categories.find(
-      item =>
-        item.id ===
-        categoryId
+  const groupId =
+    String(
+      group.id ||
+      group.variantId ||
+      group.key ||
+      group.name ||
+      `variant-${index}`
     );
 
-
-  return (
-    category?.name ||
-    ""
-  );
-
-}
-
-
-/* =========================================================
-   INITIALIZE
-========================================================= */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  init
-);
-
-
-async function init() {
-
-  bindEvents();
-
-
-  await Promise.all([
-    loadCategories(),
-    loadProducts()
-  ]);
-
-
-  handleDeepLink();
-
-}
-
-
-/* =========================================================
-   EVENTS
-========================================================= */
-
-function bindEvents() {
-
-  document.addEventListener(
-    "click",
-    handleGlobalClick
-  );
-
-
-  $("#closeOrderModal")
-    ?.addEventListener(
-      "click",
-      closeOrderModal
-    );
-
-
-  $("#orderModal")
-    ?.addEventListener(
-      "click",
-      event => {
-
-        if (
-          event.target ===
-          $("#orderModal")
-        ) {
-
-          closeOrderModal();
-
-        }
-
-      }
-    );
-
-
-  $("#orderForm")
-    ?.addEventListener(
-      "submit",
-      submitOrder
-    );
-
-
-  $("#stickyOrderBtn")
-    ?.addEventListener(
-      "click",
-      () => {
-
-        if (
-          state.orderProduct
-        ) {
-
-          startOrderProcess(
-            state.orderProduct
-          );
-
-        }
-
-      }
-    );
-
-
-  window.addEventListener(
-    "popstate",
-    handleDeepLink
-  );
-
-}
-
-
-/* =========================================================
-   GLOBAL CLICK HANDLER
-========================================================= */
-
-function handleGlobalClick(
-  event
-) {
-
-  /* ---------------------------------------------
-     CATEGORY
-  --------------------------------------------- */
-
-  const categoryButton =
-    event.target.closest(
-      ".category-pill"
-    );
-
-
-  if (categoryButton) {
-
-    selectCategory(
-      categoryButton.dataset.categoryId ||
-      ""
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     PRODUCT IMAGE
-  --------------------------------------------- */
-
-  const image =
-    event.target.closest(
-      ".product-grid-image"
-    );
-
-
-  if (image) {
-
-    openProductDetail(
-      image.dataset.productId,
-      Number(
-        image.dataset.imageIndex || 0
-      )
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     DETAIL THUMBNAIL
-  --------------------------------------------- */
-
-  const thumbnail =
-    event.target.closest(
-      ".detail-thumb"
-    );
-
-
-  if (thumbnail) {
-
-    openProductDetail(
-      thumbnail.dataset.productId,
-      Number(
-        thumbnail.dataset.imageIndex || 0
-      )
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     PRODUCT ORDER
-  --------------------------------------------- */
-
-  const orderButton =
-    event.target.closest(
-      ".product-order-btn"
-    );
-
-
-  if (orderButton) {
-
-    startOrderProcess(
-      orderButton.dataset.productId
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     STICKY ORDER
-  --------------------------------------------- */
-
-  const stickyButton =
-    event.target.closest(
-      "#stickyOrderBtn"
-    );
-
-
-  if (stickyButton) {
-
-    if (
-      state.orderProduct
-    ) {
-
-      startOrderProcess(
-        state.orderProduct
-      );
-
+  const groupName =
+    group.name ||
+    group.title ||
+    `Option ${index + 1}`;
+
+  const rawOptions =
+    Array.isArray(group.options)
+      ? group.options
+      : [];
+
+  const options = rawOptions.map((option, optionIndex) => {
+    if (typeof option === "string") {
+      return {
+        id: `${groupId}-${optionIndex}`,
+        name: option,
+        priceType: "fixed",
+        price: 0
+      };
     }
 
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     OTHER PRODUCT
-  --------------------------------------------- */
-
-  const otherProduct =
-    event.target.closest(
-      ".other-product"
-    );
-
-
-  if (otherProduct) {
-
-    openProductDetail(
-      otherProduct.dataset.productId,
-      0
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     VARIANT
-  --------------------------------------------- */
-
-  const variantButton =
-    event.target.closest(
-      ".variant-option"
-    );
-
-
-  if (variantButton) {
-
-    handleVariantSelection(
-      variantButton
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     VARIANT POPUP OPTION
-  --------------------------------------------- */
-
-  const popupOption =
-    event.target.closest(
-      ".order-variant-option"
-    );
-
-
-  if (popupOption) {
-
-    handleOrderVariantSelection(
-      popupOption
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     VARIANT POPUP CONTINUE
-  --------------------------------------------- */
-
-  const continueButton =
-    event.target.closest(
-      "#continueVariantOrderBtn"
-    );
-
-
-  if (continueButton) {
-
-    continueOrderAfterVariantSelection();
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
-     VARIANT POPUP CLOSE
-  --------------------------------------------- */
-
-  const closeVariantButton =
-    event.target.closest(
-      "#closeVariantPopup"
-    );
-
-
-  if (closeVariantButton) {
-
-    closeVariantPopup();
-
-    return;
-
-  }
-
-}
-
-
-/* =========================================================
-   LOAD CATEGORIES
-========================================================= */
-
-async function loadCategories() {
-
-  try {
-
-    const response =
-      await fetch(
-        "/api/admin/categories"
-      );
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        "Could not load categories."
-      );
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    state.categories =
-      Array.isArray(data)
-        ? data
-        : Array.isArray(
-            data?.categories
-          )
-          ? data.categories
-          : [];
-
-
-    state.categories.sort(
-      (
-        a,
-        b
-      ) => {
-
-        const orderA =
-          Number(
-            a.sort_order ??
-            a.position ??
-            999999
-          );
-
-
-        const orderB =
-          Number(
-            b.sort_order ??
-            b.position ??
-            999999
-          );
-
-
-        if (
-          orderA !==
-          orderB
-        ) {
-
-          return (
-            orderA -
-            orderB
-          );
-
-        }
-
-
-        return String(
-          a.name || ""
-        ).localeCompare(
-          String(
-            b.name || ""
-          )
-        );
-
-      }
-    );
-
-
-    renderCategoryPills();
-
-  } catch (error) {
-
-    console.error(
-      "Category load error:",
-      error
-    );
-
-
-    renderCategoryPills();
-
-  }
-
-}
-
-
-/* =========================================================
-   CATEGORY PILLS
-========================================================= */
-
-function renderCategoryPills() {
-
-  const container =
-    $("#categoryPills");
-
-
-  if (!container) {
-    return;
-  }
-
-
-  container.innerHTML = `
-
-    <button
-      type="button"
-      class="category-pill ${
-        state.selectedCategory === ""
-          ? "active"
-          : ""
-      }"
-      data-category-id=""
-    >
-      All
-    </button>
-
-  `;
-
-
-  state.categories
-    .forEach(
-      category => {
-
-        const button =
-          document.createElement(
-            "button"
-          );
-
-
-        button.type =
-          "button";
-
-
-        button.className =
-          "category-pill";
-
-
-        if (
-          state.selectedCategory ===
-          category.id
-        ) {
-
-          button.classList.add(
-            "active"
-          );
-
-        }
-
-
-        button.dataset.categoryId =
-          category.id;
-
-
-        button.textContent =
-          category.name;
-
-
-        container.appendChild(
-          button
-        );
-
-      }
-    );
-
-}
-
-
-/* =========================================================
-   SELECT CATEGORY
-========================================================= */
-
-function selectCategory(
-  categoryId
-) {
-
-  closeSingleProductView();
-
-
-  state.selectedCategory =
-    categoryId || "";
-
-
-  renderCategoryPills();
-
-  renderProducts();
-
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
+    return {
+      id: String(
+        option.id ||
+        option.optionId ||
+        `${groupId}-${optionIndex}`
+      ),
+
+      name:
+        option.name ||
+        option.title ||
+        `Option ${optionIndex + 1}`,
+
+      priceType:
+        option.priceType ||
+        option.type ||
+        "fixed",
+
+      price: Number(
+        option.price ??
+        option.amount ??
+        0
+      )
+    };
   });
 
+  return {
+    id: groupId,
+    name: groupName,
+    options
+  };
 }
 
 
-/* =========================================================
-   LOAD PRODUCTS
-========================================================= */
-
-async function loadProducts() {
-
-  const container =
-    $("#productsContainer");
-
-
-  if (!container) {
-    return;
-  }
-
-
-  container.innerHTML = `
-    <div class="loading-state">
-      Loading products...
-    </div>
-  `;
-
-
-  try {
-
-    const response =
-      await fetch(
-        "/api/products"
-      );
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        `Failed to load products (${response.status})`
-      );
-
-    }
-
-
-    const data =
-      await response.json();
-
-
-    state.products =
-      Array.isArray(data)
-        ? data
-        : Array.isArray(
-            data?.products
-          )
-          ? data.products
-          : [];
-
-
-    state.products =
-      state.products.filter(
-        product =>
-          product.active !== false
-      );
-
-
-    renderProducts();
-
-  } catch (error) {
-
-    console.error(
-      "Product load error:",
-      error
-    );
-
-
-    container.innerHTML = `
-      <div class="empty-state">
-
-        <div>
-          ⚠️
-        </div>
-
-        <strong>
-          Could not load products
-        </strong>
-
-        <p>
-          ${escapeHtml(
-            error.message
-          )}
-        </p>
-
-      </div>
-    `;
-
-  }
-
-}
-
-
-/* =========================================================
-   FILTER
-========================================================= */
-
-function getFilteredProducts() {
-
-  if (
-    !state.selectedCategory
-  ) {
-
-    return [
-      ...state.products
-    ];
-
-  }
-
-
-  return state.products.filter(
-    product =>
-      getProductCategoryId(
-        product
-      ) ===
-      state.selectedCategory
-  );
-
-}
-
-
-/* =========================================================
-   RENDER PRODUCTS
-========================================================= */
-
-function renderProducts() {
-
-  const container =
-    $("#productsContainer");
-
-
-  if (!container) {
-    return;
-  }
-
-
-  const products =
-    getFilteredProducts();
-
-
-  if (!products.length) {
-
-    container.innerHTML = `
-      <div class="empty-state">
-
-        <div>
-          📦
-        </div>
-
-        <strong>
-          No products found
-        </strong>
-
-        <p>
-          No products are available
-          in this category.
-        </p>
-
-      </div>
-    `;
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    products
-      .map(
-        product =>
-          renderProductCard(
-            product
-          )
-      )
-      .join("");
-
-}
-
-
-/* =========================================================
-   PRODUCT CARD
-========================================================= */
-
-function renderProductCard(
-  product
-) {
-
-  const images =
-    getImages(
-      product
-    );
-
-
-  const price =
-    calculateProductPrice(
-      product
-    );
-
-
-  const variantHtml =
-    renderProductVariants(
-      product
-    );
-
-
-  const imageHtml =
-    images.length
-      ? images
-          .map(
-            (
-              image,
-              index
-            ) => `
-
-              <div
-                class="product-grid-image"
-                data-product-id="${escapeAttr(
-                  product.id
-                )}"
-                data-image-index="${index}"
-              >
-
-                <img
-                  src="${escapeAttr(
-                    image.url
-                  )}"
-                  alt="${escapeAttr(
-                    product.name || ""
-                  )}"
-                  loading="lazy"
-                >
-
-                <span class="image-number">
-                  ${index + 1}
-                </span>
-
-              </div>
-
-            `
-          )
-          .join("")
-      : "";
-
-
-  return `
-
-    <article
-      class="product-card"
-      data-product-card="${escapeAttr(
-        product.id
-      )}"
-    >
-
-      <div class="product-header">
-
-        <div class="product-heading">
-
-          <h2 class="product-name">
-            ${escapeHtml(
-              product.name ||
-              "Untitled Product"
-            )}
-          </h2>
-
-
-          <div
-            class="product-price"
-            data-product-price="${escapeAttr(
-              product.id
-            )}"
-          >
-            ₹${formatMoney(
-              price
-            )}
-          </div>
-
-
-          ${
-            product.description
-              ? `
-                <p class="product-description">
-                  ${escapeHtml(
-                    product.description
-                  )}
-                </p>
-              `
-              : ""
-          }
-
-        </div>
-
-
-        <button
-          type="button"
-          class="product-order-btn"
-          data-product-id="${escapeAttr(
-            product.id
-          )}"
-        >
-          Order
-        </button>
-
-      </div>
-
-
-      ${
-        variantHtml
-          ? `
-            <div class="variant-area">
-              ${variantHtml}
-            </div>
-          `
-          : ""
-      }
-
-
-      ${
-        imageHtml
-          ? `
-            <div class="product-image-grid">
-              ${imageHtml}
-            </div>
-          `
-          : ""
-      }
-
-    </article>
-
-  `;
-
-}
-
-
-/* =========================================================
-   PRODUCT VARIANTS
-========================================================= */
-
-function renderProductVariants(
-  product
-) {
+function getVariantGroups(product) {
+  const data = getProductData(product);
 
   const groups = [];
 
+  /*
+   * Custom variant groups
+   *
+   * Example:
+   * variants: [
+   *   {
+   *     id: "thickness",
+   *     name: "Thickness",
+   *     options: [...]
+   *   }
+   * ]
+   */
 
-  const colours =
-    Array.isArray(
-      product?.data?.colours
-    )
-      ? product.data.colours
-      : [];
+  if (Array.isArray(data.variants)) {
+    data.variants.forEach((group, index) => {
+      const normalized = normalizeVariantGroup(group, index);
 
-
-  const sizes =
-    Array.isArray(
-      product?.data?.sizes
-    )
-      ? product.data.sizes
-      : [];
-
-
-  const customVariants =
-    Array.isArray(
-      product?.data?.variants
-    )
-      ? product.data.variants
-      : [];
-
-
-  if (colours.length) {
-
-    groups.push(
-      renderVariantGroup(
-        product,
-        "Colour",
-        "colours",
-        colours
-      )
-    );
-
-  }
-
-
-  if (sizes.length) {
-
-    groups.push(
-      renderVariantGroup(
-        product,
-        "Size",
-        "sizes",
-        sizes
-      )
-    );
-
-  }
-
-
-  customVariants
-    .forEach(
-      (
-        variant,
-        index
-      ) => {
-
-        if (
-          Array.isArray(
-            variant.options
-          ) &&
-          variant.options.length
-        ) {
-
-          groups.push(
-            renderVariantGroup(
-              product,
-              variant.name ||
-                `Option ${index + 1}`,
-              `custom_${index}`,
-              variant.options
-            )
-          );
-
-        }
-
+      if (normalized && normalized.options.length) {
+        groups.push(normalized);
       }
+    });
+  }
+
+  /*
+   * Colour
+   */
+
+  if (Array.isArray(data.colours) && data.colours.length) {
+    const group = normalizeVariantGroup(
+      {
+        id: "colour",
+        name: "Colour",
+        options: data.colours
+      },
+      groups.length
     );
 
+    if (group) {
+      groups.unshift(group);
+    }
+  }
 
-  return groups.join("");
+  /*
+   * Size
+   */
 
-}
+  if (Array.isArray(data.sizes) && data.sizes.length) {
+    const group = normalizeVariantGroup(
+      {
+        id: "size",
+        name: "Size",
+        options: data.sizes
+      },
+      groups.length
+    );
 
+    if (group) {
+      groups.push(group);
+    }
+  }
 
-function renderVariantGroup(
-  product,
-  label,
-  groupKey,
-  options
-) {
+  /*
+   * Remove duplicate groups
+   */
 
-  const current =
-    state.selectedVariants[
-      product.id
-    ]?.[groupKey] || "";
+  const seen = new Set();
 
+  return groups.filter(group => {
+    if (seen.has(group.id)) {
+      return false;
+    }
 
-  return `
-
-    <div class="variant-group">
-
-      <span class="variant-label">
-        ${escapeHtml(
-          label
-        )}
-      </span>
-
-
-      <div class="variant-options">
-
-        ${options
-          .map(
-            option => {
-
-              const optionId =
-                option.id ||
-                option.name;
-
-
-              const selected =
-                current ===
-                optionId;
-
-
-              return `
-
-                <button
-                  type="button"
-                  class="variant-option ${
-                    selected
-                      ? "selected"
-                      : ""
-                  }"
-                  data-product-id="${escapeAttr(
-                    product.id
-                  )}"
-                  data-variant-group="${escapeAttr(
-                    groupKey
-                  )}"
-                  data-option-id="${escapeAttr(
-                    optionId
-                  )}"
-                  data-option-name="${escapeAttr(
-                    option.name || ""
-                  )}"
-                  data-price-type="${escapeAttr(
-                    option.priceType ||
-                    "INR"
-                  )}"
-                  data-price="${Number(
-                    option.price || 0
-                  )}"
-                >
-
-                  ${escapeHtml(
-                    option.name ||
-                    "Option"
-                  )}
-
-                  ${
-                    Number(
-                      option.price || 0
-                    ) !== 0
-                      ? `
-                        <span>
-                          ${
-                            option.priceType === "%"
-                              ? ` +${option.price}%`
-                              : ` +₹${formatMoney(
-                                  option.price
-                                )}`
-                          }
-                        </span>
-                      `
-                      : ""
-                  }
-
-                </button>
-
-              `;
-
-            }
-          )
-          .join("")}
-
-      </div>
-
-    </div>
-
-  `;
-
+    seen.add(group.id);
+    return true;
+  });
 }
 
 
 /* =========================================================
-   VARIANT SELECTION
-   IMPORTANT:
-   DO NOT RE-RENDER THE CARD.
-   This preserves horizontal scroll.
-========================================================= */
+   VARIANT SELECTION STATE
+   ========================================================= */
 
-function handleVariantSelection(
-  button
-) {
-
-  const productId =
-    button.dataset.productId;
-
-  const group =
-    button.dataset.variantGroup;
-
-  const optionId =
-    button.dataset.optionId;
-
-
-  if (
-    !state.selectedVariants[
-      productId
-    ]
-  ) {
-
-    state.selectedVariants[
-      productId
-    ] = {};
-
+function getSelections(product) {
+  if (!product?.id) {
+    return {};
   }
 
-
-  state.selectedVariants[
-    productId
-  ][group] =
-    optionId;
-
-
-  /*
-    Only change selected classes
-    inside this variant group.
-
-    We intentionally DO NOT call
-    renderProductCard() here.
-
-    Therefore horizontal scroll
-    position stays exactly where
-    customer clicked.
-  */
-
-  const card =
-    document.querySelector(
-      `[data-product-card="${CSS.escape(
-        productId
-      )}"]`
-    );
-
-
-  if (card) {
-
-    card
-      .querySelectorAll(
-        `.variant-option[data-variant-group="${CSS.escape(
-          group
-        )}"]`
-      )
-      .forEach(
-        option => {
-
-          option.classList.toggle(
-            "selected",
-            option === button
-          );
-
-        }
-      );
-
+  if (!state.variantSelections[product.id]) {
+    state.variantSelections[product.id] = {};
   }
 
+  return state.variantSelections[product.id];
+}
 
-  updatePriceDisplays(
-    productId
+
+function setVariantSelection(product, groupId, optionId) {
+  if (!product?.id) return;
+
+  const selections = getSelections(product);
+
+  selections[groupId] = optionId;
+}
+
+
+function getSelectedOption(product, group) {
+  const selections = getSelections(product);
+
+  const optionId = selections[group.id];
+
+  if (!optionId) {
+    return null;
+  }
+
+  return (
+    group.options.find(
+      option => String(option.id) === String(optionId)
+    ) || null
   );
-
-
-  /*
-    If this product is currently
-    open in single-product mode,
-    update its detail price only.
-  */
-
-  if (
-    state.productViewOpen &&
-    state.selectedProduct?.id ===
-      productId
-  ) {
-
-    updateDetailPrice(
-      productId
-    );
-
-  }
-
 }
 
 
-/* =========================================================
-   UPDATE PRICE
-========================================================= */
+function allVariantsSelected(product) {
+  const groups = getVariantGroups(product);
 
-function updatePriceDisplays(
-  productId
-) {
-
-  const product =
-    state.products.find(
-      item =>
-        item.id ===
-        productId
-    );
-
-
-  if (!product) {
-    return;
+  if (!groups.length) {
+    return true;
   }
 
+  const selections = getSelections(product);
 
-  const price =
-    calculateProductPrice(
-      product
+  return groups.every(group => {
+    const selectedId = selections[group.id];
+
+    return Boolean(
+      selectedId &&
+      group.options.some(
+        option =>
+          String(option.id) === String(selectedId)
+      )
     );
-
-
-  document
-    .querySelectorAll(
-      `[data-product-price="${CSS.escape(
-        productId
-      )}"]`
-    )
-    .forEach(
-      element => {
-
-        element.textContent =
-          `₹${formatMoney(
-            price
-          )}`;
-
-      }
-    );
-
-
-  if (
-    state.orderProduct?.id ===
-    productId
-  ) {
-
-    $("#stickyProductPrice")
-      ?.replaceChildren(
-        document.createTextNode(
-          `₹${formatMoney(
-            price
-          )}`
-        )
-      );
-
-  }
-
+  });
 }
 
 
 /* =========================================================
    PRICE CALCULATION
-========================================================= */
+   ========================================================= */
 
-function calculateProductPrice(
-  product
-) {
-
-  let price =
-    Number(
-      product.price || 0
-    );
-
-
-  const selected =
-    state.selectedVariants[
-      product.id
-    ] || {};
-
-
-  const applyOption =
-    option => {
-
-      if (!option) {
-        return;
-      }
-
-
-      const amount =
-        Number(
-          option.price || 0
-        );
-
-
-      if (
-        option.priceType === "%"
-      ) {
-
-        price +=
-          price *
-          amount /
-          100;
-
-      } else {
-
-        price +=
-          amount;
-
-      }
-
-    };
-
-
-  const colours =
-    product?.data?.colours ||
-    [];
-
-
-  const sizes =
-    product?.data?.sizes ||
-    [];
-
-
-  const variants =
-    product?.data?.variants ||
-    [];
-
-
-  if (
-    selected.colours
-  ) {
-
-    applyOption(
-      colours.find(
-        option =>
-          (
-            option.id ||
-            option.name
-          ) ===
-          selected.colours
-      )
-    );
-
+function calculateVariantPrice(basePrice, option) {
+  if (!option) {
+    return 0;
   }
 
+  const value = Number(option.price || 0);
 
-  if (
-    selected.sizes
-  ) {
-
-    applyOption(
-      sizes.find(
-        option =>
-          (
-            option.id ||
-            option.name
-          ) ===
-          selected.sizes
-      )
-    );
-
+  if (!value) {
+    return 0;
   }
 
+  const type = String(
+    option.priceType || "fixed"
+  ).toLowerCase();
 
-  variants.forEach(
-    (
-      variant,
-      index
-    ) => {
+  if (
+    type === "percentage" ||
+    type === "percent" ||
+    type === "%"
+  ) {
+    return Number(basePrice || 0) * value / 100;
+  }
 
-      const selectedId =
-        selected[
-          `custom_${index}`
-        ];
-
-
-      if (!selectedId) {
-        return;
-      }
-
-
-      const option =
-        (
-          variant.options ||
-          []
-        ).find(
-          item =>
-            (
-              item.id ||
-              item.name
-            ) ===
-            selectedId
-        );
-
-
-      applyOption(
-        option
-      );
-
-    }
-  );
-
-
-  return price;
-
+  return value;
 }
 
 
-/* =========================================================
-   GET SELECTED VARIANTS
-========================================================= */
+function calculateProductPrice(product, selections = null) {
+  const basePrice = Number(
+    product?.price || 0
+  );
 
-function getSelectedVariantDetails(
-  product
-) {
+  const groups = getVariantGroups(product);
 
   const selected =
-    state.selectedVariants[
-      product.id
-    ] || {};
+    selections ||
+    getSelections(product);
 
+  let finalPrice = basePrice;
 
-  const result = [];
+  groups.forEach(group => {
+    const optionId = selected[group.id];
 
-
-  function addSelected(
-    label,
-    groupKey,
-    options
-  ) {
-
-    const selectedId =
-      selected[groupKey];
-
-
-    if (!selectedId) {
+    if (!optionId) {
       return;
     }
 
-
-    const option =
-      options.find(
-        item =>
-          (
-            item.id ||
-            item.name
-          ) ===
-          selectedId
-      );
-
-
-    if (option) {
-
-      result.push({
-
-        label,
-
-        name:
-          option.name || "",
-
-        priceType:
-          option.priceType ||
-          "INR",
-
-        price:
-          Number(
-            option.price || 0
-          )
-
-      });
-
-    }
-
-  }
-
-
-  addSelected(
-    "Colour",
-    "colours",
-    product?.data?.colours || []
-  );
-
-
-  addSelected(
-    "Size",
-    "sizes",
-    product?.data?.sizes || []
-  );
-
-
-  (
-    product?.data?.variants ||
-    []
-  )
-    .forEach(
-      (
-        variant,
-        index
-      ) => {
-
-        addSelected(
-          variant.name ||
-            `Option ${index + 1}`,
-          `custom_${index}`,
-          variant.options ||
-            []
-        );
-
-      }
-    );
-
-
-  return result;
-
-}
-
-
-/* =========================================================
-   CHECK AVAILABLE VARIANTS
-========================================================= */
-
-function getVariantGroups(
-  product
-) {
-
-  const groups = [];
-
-
-  const colours =
-    product?.data?.colours || [];
-
-
-  const sizes =
-    product?.data?.sizes || [];
-
-
-  const customVariants =
-    product?.data?.variants || [];
-
-
-  if (
-    Array.isArray(colours) &&
-    colours.length
-  ) {
-
-    groups.push({
-
-      key: "colours",
-
-      label: "Colour",
-
-      options: colours
-
-    });
-
-  }
-
-
-  if (
-    Array.isArray(sizes) &&
-    sizes.length
-  ) {
-
-    groups.push({
-
-      key: "sizes",
-
-      label: "Size",
-
-      options: sizes
-
-    });
-
-  }
-
-
-  customVariants
-    .forEach(
-      (
-        variant,
-        index
-      ) => {
-
-        if (
-          Array.isArray(
-            variant.options
-          ) &&
-          variant.options.length
-        ) {
-
-          groups.push({
-
-            key:
-              `custom_${index}`,
-
-            label:
-              variant.name ||
-              `Option ${index + 1}`,
-
-            options:
-              variant.options
-
-          });
-
-        }
-
-      }
-    );
-
-
-  return groups;
-
-}
-
-
-/* =========================================================
-   START ORDER PROCESS
-========================================================= */
-
-function startOrderProcess(
-  productOrId
-) {
-
-  const product =
-    typeof productOrId ===
-    "object"
-
-      ? productOrId
-
-      : state.products.find(
-          item =>
-            item.id ===
-            productOrId
-        );
-
-
-  if (!product) {
-    return;
-  }
-
-
-  state.orderProduct =
-    product;
-
-
-  /*
-    If product has variants,
-    customer MUST select them first.
-  */
-
-  const groups =
-    getVariantGroups(
-      product
-    );
-
-
-  if (
-    groups.length
-  ) {
-
-    openVariantSelectionPopup(
-      product
-    );
-
-    return;
-
-  }
-
-
-  /*
-    No variants:
-    directly show customer form.
-  */
-
-  openOrderModal(
-    product
-  );
-
-}
-
-
-/* =========================================================
-   VARIANT SELECTION POPUP
-========================================================= */
-
-function openVariantSelectionPopup(
-  product
-) {
-
-  let popup =
-    $("#variantSelectionModal");
-
-
-  /*
-    Create popup dynamically.
-    No HTML change required.
-  */
-
-  if (!popup) {
-
-    popup =
-      document.createElement(
-        "div"
-      );
-
-    popup.id =
-      "variantSelectionModal";
-
-    popup.className =
-      "modal-overlay";
-
-
-    document.body.appendChild(
-      popup
-    );
-
-  }
-
-
-  const groups =
-    getVariantGroups(
-      product
-    );
-
-
-  const selected =
-    state.selectedVariants[
-      product.id
-    ] || {};
-
-
-  const image =
-    getImages(
-      product
-    )[0]?.url ||
-    product.imageUrl ||
-    "";
-
-
-  popup.innerHTML = `
-
-    <div
-      class="order-modal variant-selection-modal"
-    >
-
-      <div class="modal-header">
-
-        <div>
-
-          <h2>
-            Select Options
-          </h2>
-
-          <p>
-            ${escapeHtml(
-              product.name || ""
-            )}
-          </p>
-
-        </div>
-
-
-        <button
-          type="button"
-          id="closeVariantPopup"
-          class="close-btn"
-        >
-          ×
-        </button>
-
-      </div>
-
-
-      ${
-        image
-          ? `
-            <div
-              style="
-                display:flex;
-                align-items:center;
-                gap:10px;
-                padding:10px;
-                margin-bottom:15px;
-                border:1px solid #27272a;
-                border-radius:10px;
-                background:#0f0f11;
-              "
-            >
-
-              <img
-                src="${escapeAttr(
-                  image
-                )}"
-                alt=""
-                style="
-                  width:55px;
-                  height:55px;
-                  object-fit:cover;
-                  border-radius:8px;
-                "
-              >
-
-              <div>
-
-                <strong
-                  style="
-                    display:block;
-                    font-size:13px;
-                  "
-                >
-                  ${escapeHtml(
-                    product.name || ""
-                  )}
-                </strong>
-
-                <span
-                  id="variantPopupPrice"
-                  style="
-                    display:block;
-                    margin-top:4px;
-                    color:#c084fc;
-                    font-size:13px;
-                    font-weight:800;
-                  "
-                >
-                  ₹${formatMoney(
-                    calculateProductPrice(
-                      product
-                    )
-                  )}
-                </span>
-
-              </div>
-
-            </div>
-          `
-          : ""
-      }
-
-
-      <div>
-
-        ${groups
-          .map(
-            group => `
-
-              <div
-                class="variant-group"
-                style="
-                  margin-bottom:18px;
-                "
-              >
-
-                <span
-                  class="variant-label"
-                  style="
-                    display:block;
-                    margin-bottom:8px;
-                  "
-                >
-                  ${escapeHtml(
-                    group.label
-                  )}
-                </span>
-
-
-                <div
-                  class="variant-options"
-                  style="
-                    display:flex;
-                    gap:8px;
-                    overflow-x:auto;
-                    padding-bottom:4px;
-                  "
-                >
-
-                  ${group.options
-                    .map(
-                      option => {
-
-                        const optionId =
-                          option.id ||
-                          option.name;
-
-
-                        const isSelected =
-                          selected[
-                            group.key
-                          ] ===
-                          optionId;
-
-
-                        return `
-
-                          <button
-                            type="button"
-                            class="
-                              variant-option
-                              order-variant-option
-                              ${
-                                isSelected
-                                  ? "selected"
-                                  : ""
-                              }
-                            "
-                            data-product-id="${escapeAttr(
-                              product.id
-                            )}"
-                            data-variant-group="${escapeAttr(
-                              group.key
-                            )}"
-                            data-option-id="${escapeAttr(
-                              optionId
-                            )}"
-                          >
-
-                            ${escapeHtml(
-                              option.name ||
-                              "Option"
-                            )}
-
-                            ${
-                              Number(
-                                option.price ||
-                                0
-                              ) !== 0
-                                ? `
-                                  <span>
-                                    ${
-                                      option.priceType ===
-                                      "%"
-                                        ? ` +${option.price}%`
-                                        : ` +₹${formatMoney(
-                                            option.price
-                                          )}`
-                                    }
-                                  </span>
-                                `
-                                : ""
-                            }
-
-                          </button>
-
-                        `;
-
-                      }
-                    )
-                    .join("")}
-
-                </div>
-
-              </div>
-
-            `
-          )
-          .join("")}
-
-      </div>
-
-
-      <div
-        id="variantSelectionMessage"
-        style="
-          min-height:18px;
-          margin-bottom:8px;
-          color:#fca5a5;
-          font-size:12px;
-        "
-      ></div>
-
-
-      <button
-        type="button"
-        id="continueVariantOrderBtn"
-        class="submit-order-btn"
-      >
-        Continue to Order
-      </button>
-
-    </div>
-
-  `;
-
-
-  popup.classList.remove(
-    "hidden"
-  );
-
-}
-
-
-/* =========================================================
-   VARIANT POPUP SELECTION
-========================================================= */
-
-function handleOrderVariantSelection(
-  button
-) {
-
-  const productId =
-    button.dataset.productId;
-
-  const group =
-    button.dataset.variantGroup;
-
-  const optionId =
-    button.dataset.optionId;
-
-
-  if (
-    !state.selectedVariants[
-      productId
-    ]
-  ) {
-
-    state.selectedVariants[
-      productId
-    ] = {};
-
-  }
-
-
-  state.selectedVariants[
-    productId
-  ][group] =
-    optionId;
-
-
-  /*
-    Change selected state ONLY.
-    Do not recreate popup.
-  */
-
-  const popup =
-    $("#variantSelectionModal");
-
-
-  if (popup) {
-
-    popup
-      .querySelectorAll(
-        `.order-variant-option[data-variant-group="${CSS.escape(
-          group
-        )}"]`
-      )
-      .forEach(
-        item => {
-
-          item.classList.toggle(
-            "selected",
-            item === button
-          );
-
-        }
-      );
-
-  }
-
-
-  const product =
-    state.products.find(
+    const option = group.options.find(
       item =>
-        item.id ===
-        productId
+        String(item.id) === String(optionId)
     );
 
-
-  if (product) {
-
-    const priceElement =
-      $("#variantPopupPrice");
-
-
-    if (priceElement) {
-
-      priceElement.textContent =
-        `₹${formatMoney(
-          calculateProductPrice(
-            product
-          )
-        )}`;
-
+    if (!option) {
+      return;
     }
 
-  }
-
-}
-
-
-/* =========================================================
-   CONTINUE ORDER AFTER VARIANTS
-========================================================= */
-
-function continueOrderAfterVariantSelection() {
-
-  const product =
-    state.orderProduct;
-
-
-  if (!product) {
-    return;
-  }
-
-
-  const groups =
-    getVariantGroups(
-      product
+    finalPrice += calculateVariantPrice(
+      basePrice,
+      option
     );
-
-
-  const selected =
-    state.selectedVariants[
-      product.id
-    ] || {};
-
-
-  const missing =
-    groups.find(
-      group =>
-        !selected[
-          group.key
-        ]
-    );
-
-
-  if (missing) {
-
-    const message =
-      $("#variantSelectionMessage");
-
-
-    if (message) {
-
-      message.textContent =
-        `Please select ${missing.label}.`;
-
-    }
-
-
-    return;
-
-  }
-
-
-  closeVariantPopup();
-
-
-  openOrderModal(
-    product
-  );
-
-}
-
-
-/* =========================================================
-   CLOSE VARIANT POPUP
-========================================================= */
-
-function closeVariantPopup() {
-
-  const popup =
-    $("#variantSelectionModal");
-
-
-  if (popup) {
-
-    popup.classList.add(
-      "hidden"
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   SINGLE PRODUCT VIEW
-========================================================= */
-
-function openProductDetail(
-  productId,
-  imageIndex = 0,
-  updateUrl = true
-) {
-
-  const product =
-    state.products.find(
-      item =>
-        item.id ===
-        productId
-    );
-
-
-  if (!product) {
-    return;
-  }
-
-
-  const images =
-    getImages(
-      product
-    );
-
-
-  if (
-    images.length
-  ) {
-
-    imageIndex =
-      Math.max(
-        0,
-        Math.min(
-          imageIndex,
-          images.length - 1
-        )
-      );
-
-  } else {
-
-    imageIndex = 0;
-
-  }
-
-
-  state.selectedProduct =
-    product;
-
-  state.selectedImageIndex =
-    imageIndex;
-
-  state.productViewOpen =
-    true;
-
-
-  /*
-    Hide category filters.
-  */
-
-  const categorySection =
-    document.querySelector(
-      ".category-filter-section"
-    );
-
-
-  if (categorySection) {
-
-    categorySection.classList.add(
-      "hidden"
-    );
-
-  }
-
-
-  /*
-    Render ONLY this product.
-  */
-
-  const container =
-    $("#productsContainer");
-
-
-  if (!container) {
-    return;
-  }
-
-
-  container.innerHTML =
-    renderSingleProductPage(
-      product,
-      imageIndex
-    );
-
-
-  updateStickyOrder(
-    product
-  );
-
-
-  if (updateUrl) {
-
-    updateProductUrl(
-      product.id,
-      imageIndex
-    );
-
-  }
-
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
   });
 
+  return Math.round(finalPrice);
 }
 
 
 /* =========================================================
-   SINGLE PRODUCT PAGE HTML
-========================================================= */
+   SELECTED VARIANT DETAILS
+   ========================================================= */
 
-function renderSingleProductPage(
-  product,
-  imageIndex
-) {
+function getSelectedVariantDetails(product, selections = null) {
+  const groups = getVariantGroups(product);
 
-  const images =
-    getImages(
-      product
+  const selected =
+    selections ||
+    getSelections(product);
+
+  return groups
+    .map(group => {
+      const optionId = selected[group.id];
+
+      if (!optionId) {
+        return null;
+      }
+
+      const option = group.options.find(
+        item =>
+          String(item.id) === String(optionId)
+      );
+
+      if (!option) {
+        return null;
+      }
+
+      return {
+        groupId: group.id,
+        groupName: group.name,
+        optionId: option.id,
+        optionName: option.name,
+        priceType: option.priceType,
+        price: Number(option.price || 0)
+      };
+    })
+    .filter(Boolean);
+}
+
+
+/* =========================================================
+   API
+   ========================================================= */
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      "cache-control": "no-cache"
+    }
+  });
+
+  let data = null;
+
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      `Request failed: ${response.status}`
+    );
+  }
+
+  return data;
+}
+
+
+/* =========================================================
+   LOAD PRODUCTS
+   ========================================================= */
+
+async function loadProducts() {
+  const data = await api("/api/products");
+
+  state.products =
+    Array.isArray(data)
+      ? data.filter(product => product.active !== false)
+      : [];
+
+  renderProducts();
+}
+
+
+/* =========================================================
+   LOAD CATEGORIES
+   ========================================================= */
+
+async function loadCategories() {
+  try {
+    const data =
+      await api("/api/admin/categories");
+
+    state.categories =
+      Array.isArray(data)
+        ? data.filter(category => category.active !== false)
+        : [];
+
+    renderCategories();
+  } catch (error) {
+    console.error(
+      "Category loading failed:",
+      error
     );
 
+    state.categories = [];
 
-  const selectedImage =
-    images[
-      imageIndex
-    ]?.url ||
+    renderCategories();
+  }
+}
+
+
+/* =========================================================
+   CATEGORIES
+   ========================================================= */
+
+function renderCategories() {
+  const container =
+    $("#categoryPills");
+
+  if (!container) return;
+
+  let html = `
+    <button
+      class="category-pill active"
+      data-category=""
+    >
+      All
+    </button>
+  `;
+
+  state.categories.forEach(category => {
+    html += `
+      <button
+        class="category-pill"
+        data-category="${escapeHtml(category.id)}"
+      >
+        ${escapeHtml(category.name)}
+      </button>
+    `;
+  });
+
+  container.innerHTML = html;
+
+  $$(".category-pill", container)
+    .forEach(button => {
+      button.addEventListener(
+        "click",
+        () => {
+          state.selectedCategory =
+            button.dataset.category || "";
+
+          $$(".category-pill", container)
+            .forEach(item =>
+              item.classList.toggle(
+                "active",
+                item === button
+              )
+            );
+
+          renderProducts();
+        }
+      );
+    });
+}
+
+
+/* =========================================================
+   CATEGORY MATCH
+   ========================================================= */
+
+function productMatchesCategory(product) {
+  if (!state.selectedCategory) {
+    return true;
+  }
+
+  const data = getProductData(product);
+
+  return (
+    String(data.categoryId || "") ===
+      String(state.selectedCategory) ||
+
+    String(data.category_id || "") ===
+      String(state.selectedCategory)
+  );
+}
+
+
+/* =========================================================
+   PRODUCT CARD
+   ========================================================= */
+
+function renderProductCard(product) {
+  const images =
+    getProductImages(product);
+
+  const firstImage =
+    images[0] ||
     product.imageUrl ||
     "";
 
+  const groups =
+    getVariantGroups(product);
+
+  const selections =
+    getSelections(product);
 
   const price =
     calculateProductPrice(
-      product
+      product,
+      selections
     );
 
+  let variantsHtml = "";
 
-  const variants =
-    renderProductVariants(
-      product
-    );
-
-
-  const otherProducts =
-    state.products.filter(
-      item =>
-        item.id !==
-        product.id
-    );
-
-
-  return `
-
-    <article
-      class="product-card single-product-card"
-      data-product-card="${escapeAttr(
-        product.id
-      )}"
-    >
-
-      ${
-        selectedImage
-          ? `
-            <div
-              style="
-                padding:10px;
-              "
-            >
-
-              <img
-                class="detail-large-image"
-                src="${escapeAttr(
-                  selectedImage
-                )}"
-                alt="${escapeAttr(
-                  product.name || ""
-                )}"
-              >
-
-            </div>
-          `
-          : ""
-      }
-
-
-      ${
-        images.length > 1
-          ? `
-            <div
-              class="detail-thumbnails"
-              style="
-                padding:
-                  0 10px 10px;
-              "
-            >
-
-              ${images
-                .map(
-                  (
-                    image,
-                    index
-                  ) => `
-
-                    <button
-                      type="button"
-                      class="detail-thumb ${
-                        index ===
-                        imageIndex
-                          ? "active"
-                          : ""
-                      }"
-                      data-product-id="${escapeAttr(
-                        product.id
-                      )}"
-                      data-image-index="${index}"
-                    >
-
-                      <img
-                        src="${escapeAttr(
-                          image.url
-                        )}"
-                        alt=""
-                      >
-
-                    </button>
-
-                  `
-                )
-                .join("")}
-
-            </div>
-          `
-          : ""
-      }
-
-
+  groups.forEach(group => {
+    variantsHtml += `
       <div
-        class="detail-info"
-        style="
-          padding:
-            8px 15px 20px;
-        "
+        class="product-variant-group"
+        data-group-id="${escapeHtml(group.id)}"
       >
+        <div class="product-variant-title">
+          ${escapeHtml(group.name)}
+        </div>
 
-        <div
-          style="
-            display:flex;
-            align-items:flex-start;
-            justify-content:space-between;
-            gap:12px;
-          "
-        >
+        <div class="product-variant-options">
+          ${group.options.map(option => {
 
-          <div>
+            const selected =
+              String(selections[group.id]) ===
+              String(option.id);
 
-            <h2>
-              ${escapeHtml(
-                product.name || ""
-              )}
-            </h2>
+            const optionPrice =
+              Number(option.price || 0);
 
+            let priceText = "";
 
-            ${
-              product.description
-                ? `
-                  <p class="detail-description">
-                    ${escapeHtml(
-                      product.description
-                    )}
-                  </p>
-                `
-                : ""
+            if (optionPrice > 0) {
+              if (
+                option.priceType === "percentage" ||
+                option.priceType === "percent" ||
+                option.priceType === "%"
+              ) {
+                priceText =
+                  ` +${optionPrice}%`;
+              } else {
+                priceText =
+                  ` +${money(optionPrice)}`;
+              }
             }
 
+            return `
+              <button
+                type="button"
+                class="variant-option ${selected ? "active" : ""}"
+                data-group-id="${escapeHtml(group.id)}"
+                data-option-id="${escapeHtml(option.id)}"
+              >
+                ${escapeHtml(option.name)}
+                ${priceText}
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  return `
+    <article
+      class="product-card"
+      data-product-id="${escapeHtml(product.id)}"
+    >
+
+      <div
+        class="product-card-image-wrap"
+        data-action="open-product"
+      >
+        ${
+          firstImage
+            ? `
+              <img
+                class="product-grid-image"
+                src="${escapeHtml(firstImage)}"
+                alt="${escapeHtml(product.name)}"
+                loading="lazy"
+              >
+            `
+            : `
+              <div class="product-no-image">
+                No Image
+              </div>
+            `
+        }
+      </div>
+
+      <div class="product-card-content">
+
+        <div class="product-title-row">
+
+          <div class="product-title-block">
+            <h3>
+              ${escapeHtml(product.name)}
+            </h3>
 
             <div
-              class="detail-price"
-              id="detailPrice-${escapeAttr(
-                product.id
-              )}"
+              class="product-card-price"
+              data-price
             >
-              ₹${formatMoney(
-                price
-              )}
+              ${money(price)}
             </div>
-
           </div>
-
 
           <button
             type="button"
             class="product-order-btn"
-            data-product-id="${escapeAttr(
-              product.id
-            )}"
+            data-action="order"
           >
             Order
           </button>
 
         </div>
 
+        ${
+          product.description
+            ? `
+              <div class="product-description">
+                ${escapeHtml(product.description)}
+              </div>
+            `
+            : ""
+        }
 
         ${
-          variants
+          variantsHtml
             ? `
-              <div
-                class="variant-area"
-                style="
-                  padding:
-                    0;
-                  margin-top:10px;
-                "
+              <div class="product-variants">
+                ${variantsHtml}
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+    </article>
+  `;
+}
+
+
+/* =========================================================
+   RENDER PRODUCTS
+   ========================================================= */
+
+function renderProducts() {
+  const container =
+    $("#productsContainer");
+
+  if (!container) return;
+
+  const products =
+    state.products.filter(
+      product =>
+        productMatchesCategory(product)
+    );
+
+  if (!products.length) {
+    container.innerHTML = `
+      <div class="empty-products">
+        No products found.
+      </div>
+    `;
+
+    return;
+  }
+
+  container.innerHTML =
+    products
+      .map(renderProductCard)
+      .join("");
+
+  bindProductEvents();
+}
+
+
+/* =========================================================
+   PRODUCT EVENTS
+   ========================================================= */
+
+function bindProductEvents() {
+  $$(".product-card")
+    .forEach(card => {
+
+      const productId =
+        card.dataset.productId;
+
+      const product =
+        state.products.find(
+          item =>
+            String(item.id) ===
+            String(productId)
+        );
+
+      if (!product) return;
+
+      /*
+       * IMAGE
+       */
+
+      const imageArea =
+        $('[data-action="open-product"]', card);
+
+      if (imageArea) {
+        imageArea.addEventListener(
+          "click",
+          () => {
+            openProductDetail(
+              product,
+              0
+            );
+          }
+        );
+      }
+
+      /*
+       * ORDER
+       */
+
+      const orderButton =
+        $('[data-action="order"]', card);
+
+      if (orderButton) {
+        orderButton.addEventListener(
+          "click",
+          event => {
+            event.stopPropagation();
+
+            startOrderFlow(
+              product,
+              0
+            );
+          }
+        );
+      }
+
+      /*
+       * VARIANTS
+       *
+       * IMPORTANT:
+       * Do NOT re-render the complete card.
+       * This prevents horizontal variant
+       * scrolling from jumping back.
+       */
+
+      $$(".variant-option", card)
+        .forEach(button => {
+
+          button.addEventListener(
+            "click",
+            event => {
+
+              event.preventDefault();
+              event.stopPropagation();
+
+              const groupId =
+                button.dataset.groupId;
+
+              const optionId =
+                button.dataset.optionId;
+
+              setVariantSelection(
+                product,
+                groupId,
+                optionId
+              );
+
+              /*
+               * Update only active buttons
+               */
+
+              const group =
+                button.closest(
+                  ".product-variant-group"
+                );
+
+              if (group) {
+                $$(".variant-option", group)
+                  .forEach(item => {
+                    item.classList.toggle(
+                      "active",
+                      item === button
+                    );
+                  });
+              }
+
+              /*
+               * Update price only
+               */
+
+              const price =
+                calculateProductPrice(
+                  product
+                );
+
+              const priceElement =
+                $("[data-price]", card);
+
+              if (priceElement) {
+                priceElement.textContent =
+                  money(price);
+              }
+            }
+          );
+
+        });
+
+    });
+}
+
+
+/* =========================================================
+   PRODUCT DETAIL
+   ========================================================= */
+
+function openProductDetail(
+  product,
+  imageIndex = 0
+) {
+  state.selectedProduct = product;
+  state.selectedImageIndex =
+    Number(imageIndex || 0);
+
+  state.productViewOpen = true;
+
+  const detail =
+    $("#productDetailView");
+
+  const products =
+    $("#productsContainer");
+
+  const categorySection =
+    $(".category-filter-section");
+
+  if (!detail) {
+    console.error(
+      "Missing #productDetailView"
+    );
+
+    return;
+  }
+
+  if (products) {
+    products.style.display = "none";
+  }
+
+  if (categorySection) {
+    categorySection.style.display =
+      "none";
+  }
+
+  detail.style.display = "block";
+
+  renderProductDetail();
+
+  updateProductUrl(
+    product.id,
+    state.selectedImageIndex
+  );
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+}
+
+
+/* =========================================================
+   DETAIL RENDER
+   ========================================================= */
+
+function renderProductDetail() {
+  const product =
+    state.selectedProduct;
+
+  const detail =
+    $("#productDetailView");
+
+  if (!product || !detail) {
+    return;
+  }
+
+  const images =
+    getProductImages(product);
+
+  if (
+    state.selectedImageIndex >= images.length
+  ) {
+    state.selectedImageIndex = 0;
+  }
+
+  const selectedImage =
+    images[state.selectedImageIndex] ||
+    product.imageUrl ||
+    "";
+
+  const groups =
+    getVariantGroups(product);
+
+  const selections =
+    getSelections(product);
+
+  const price =
+    calculateProductPrice(
+      product,
+      selections
+    );
+
+  detail.innerHTML = `
+
+    <div class="product-detail-inner">
+
+      <button
+        type="button"
+        class="product-detail-back"
+        id="closeProductDetail"
+      >
+        ← Back
+      </button>
+
+      <div class="detail-main-image-wrap">
+
+        ${
+          selectedImage
+            ? `
+              <img
+                class="detail-large-image"
+                src="${escapeHtml(selectedImage)}"
+                alt="${escapeHtml(product.name)}"
               >
-                ${variants}
+            `
+            : `
+              <div class="product-no-image">
+                No Image
+              </div>
+            `
+        }
+
+      </div>
+
+      ${
+        images.length > 1
+          ? `
+            <div class="detail-thumbnails">
+              ${images.map((image, index) => `
+                <button
+                  type="button"
+                  class="detail-thumb ${
+                    index === state.selectedImageIndex
+                      ? "active"
+                      : ""
+                  }"
+                  data-image-index="${index}"
+                >
+                  <img
+                    src="${escapeHtml(image)}"
+                    alt=""
+                  >
+                </button>
+              `).join("")}
+            </div>
+          `
+          : ""
+      }
+
+      <div class="detail-info">
+
+        <div class="detail-title-row">
+
+          <h1>
+            ${escapeHtml(product.name)}
+          </h1>
+
+          <button
+            type="button"
+            class="detail-order-btn"
+            id="detailOrderButton"
+          >
+            Order
+          </button>
+
+        </div>
+
+        <div
+          class="detail-price"
+          id="detailPrice"
+        >
+          ${money(price)}
+        </div>
+
+        ${
+          product.description
+            ? `
+              <div class="detail-description">
+                ${escapeHtml(product.description)}
+              </div>
+            `
+            : ""
+        }
+
+        ${
+          groups.length
+            ? `
+              <div class="detail-variants">
+
+                ${groups.map(group => {
+
+                  const selected =
+                    selections[group.id];
+
+                  return `
+                    <div
+                      class="detail-variant-group"
+                      data-group-id="${escapeHtml(group.id)}"
+                    >
+
+                      <div class="detail-variant-title">
+                        ${escapeHtml(group.name)}
+                      </div>
+
+                      <div class="detail-variant-options">
+
+                        ${group.options.map(option => {
+
+                          const active =
+                            String(selected) ===
+                            String(option.id);
+
+                          let priceText = "";
+
+                          if (
+                            Number(option.price || 0) > 0
+                          ) {
+                            if (
+                              option.priceType === "percentage" ||
+                              option.priceType === "percent" ||
+                              option.priceType === "%"
+                            ) {
+                              priceText =
+                                ` +${option.price}%`;
+                            } else {
+                              priceText =
+                                ` +${money(option.price)}`;
+                            }
+                          }
+
+                          return `
+                            <button
+                              type="button"
+                              class="detail-variant-option ${
+                                active ? "active" : ""
+                              }"
+                              data-group-id="${escapeHtml(group.id)}"
+                              data-option-id="${escapeHtml(option.id)}"
+                            >
+                              ${escapeHtml(option.name)}
+                              ${priceText}
+                            </button>
+                          `;
+
+                        }).join("")}
+
+                      </div>
+
+                    </div>
+                  `;
+
+                }).join("")}
+
               </div>
             `
             : ""
@@ -2721,730 +1202,1365 @@ function renderSingleProductPage(
 
       </div>
 
+      <div class="other-products-section">
 
-      ${
-        otherProducts.length
-          ? `
+        <h2>
+          Other Products
+        </h2>
 
-            <div
-              style="
-                padding:
-                  0 15px 20px;
-              "
-            >
+        <div class="other-products-grid">
 
-              <div class="other-products-title">
-                Other Products
-              </div>
+          ${
+            state.products
+              .filter(item =>
+                String(item.id) !==
+                String(product.id)
+              )
+              .map(item => `
+                <div
+                  class="other-product"
+                  data-other-product-id="${escapeHtml(item.id)}"
+                >
 
+                  <img
+                    src="${escapeHtml(
+                      getProductImage(item, 0)
+                    )}"
+                    alt="${escapeHtml(item.name)}"
+                    loading="lazy"
+                  >
 
-              <div class="other-products">
+                  <div>
+                    ${escapeHtml(item.name)}
+                  </div>
 
-                ${otherProducts
-                  .map(
-                    other => {
+                  <strong>
+                    ${money(
+                      calculateProductPrice(item)
+                    )}
+                  </strong>
 
-                      const image =
-                        getImages(
-                          other
-                        )[0]?.url ||
-                        other.imageUrl ||
-                        "";
+                </div>
+              `)
+              .join("")
+          }
 
+        </div>
 
-                      return `
+      </div>
 
-                        <div
-                          class="other-product"
-                          data-product-id="${escapeAttr(
-                            other.id
-                          )}"
-                        >
-
-                          ${
-                            image
-                              ? `
-                                <img
-                                  src="${escapeAttr(
-                                    image
-                                  )}"
-                                  alt="${escapeAttr(
-                                    other.name || ""
-                                  )}"
-                                  loading="lazy"
-                                >
-                              `
-                              : `
-                                <div
-                                  style="
-                                    height:110px;
-                                    display:flex;
-                                    align-items:center;
-                                    justify-content:center;
-                                  "
-                                >
-                                  📦
-                                </div>
-                              `
-                          }
-
-
-                          <div class="other-product-info">
-
-                            <span class="other-product-name">
-                              ${escapeHtml(
-                                other.name || ""
-                              )}
-                            </span>
-
-
-                            <div class="other-product-price">
-                              ₹${formatMoney(
-                                other.price
-                              )}
-                            </div>
-
-                          </div>
-
-                        </div>
-
-                      `;
-
-                    }
-                  )
-                  .join("")}
-
-              </div>
-
-            </div>
-
-          `
-          : ""
-      }
-
-    </article>
-
+    </div>
   `;
 
+  bindDetailEvents();
+
+  showStickyOrder(product, price);
 }
 
 
 /* =========================================================
-   UPDATE DETAIL PRICE
-========================================================= */
+   DETAIL EVENTS
+   ========================================================= */
 
-function updateDetailPrice(
-  productId
-) {
+function bindDetailEvents() {
 
   const product =
-    state.products.find(
-      item =>
-        item.id ===
-        productId
+    state.selectedProduct;
+
+  if (!product) return;
+
+  /*
+   * BACK
+   */
+
+  const back =
+    $("#closeProductDetail");
+
+  if (back) {
+    back.addEventListener(
+      "click",
+      closeSingleProductView
     );
-
-
-  if (!product) {
-    return;
   }
 
+  /*
+   * THUMBNAILS
+   */
 
-  const element =
-    document.querySelector(
-      `#detailPrice-${CSS.escape(
-        productId
-      )}`
+  $$(".detail-thumb")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const index =
+            Number(
+              button.dataset.imageIndex
+            );
+
+          state.selectedImageIndex =
+            index;
+
+          renderProductDetail();
+
+          updateProductUrl(
+            product.id,
+            index
+          );
+        }
+      );
+
+    });
+
+  /*
+   * DETAIL VARIANTS
+   */
+
+  $$(".detail-variant-option")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const groupId =
+            button.dataset.groupId;
+
+          const optionId =
+            button.dataset.optionId;
+
+          setVariantSelection(
+            product,
+            groupId,
+            optionId
+          );
+
+          /*
+           * Re-rendering the detail page is okay
+           * here because the detail variant groups
+           * are not horizontal card sliders.
+           */
+
+          renderProductDetail();
+        }
+      );
+
+    });
+
+  /*
+   * ORDER
+   */
+
+  const orderButton =
+    $("#detailOrderButton");
+
+  if (orderButton) {
+    orderButton.addEventListener(
+      "click",
+      () => {
+        startOrderFlow(
+          product,
+          state.selectedImageIndex
+        );
+      }
     );
-
-
-  if (element) {
-
-    element.textContent =
-      `₹${formatMoney(
-        calculateProductPrice(
-          product
-        )
-      )}`;
-
   }
 
+  /*
+   * OTHER PRODUCTS
+   */
 
-  updateStickyOrder(
-    product
-  );
+  $$(".other-product")
+    .forEach(card => {
 
+      card.addEventListener(
+        "click",
+        () => {
+
+          const productId =
+            card.dataset.otherProductId;
+
+          const other =
+            state.products.find(
+              item =>
+                String(item.id) ===
+                String(productId)
+            );
+
+          if (other) {
+            openProductDetail(
+              other,
+              0
+            );
+          }
+        }
+      );
+
+    });
 }
 
 
 /* =========================================================
-   CLOSE SINGLE PRODUCT VIEW
-========================================================= */
+   CLOSE PRODUCT DETAIL
+   ========================================================= */
 
 function closeSingleProductView() {
 
-  if (
-    !state.productViewOpen
-  ) {
+  state.selectedProduct = null;
+  state.productViewOpen = false;
 
-    return;
+  const detail =
+    $("#productDetailView");
 
-  }
-
-
-  state.productViewOpen =
-    false;
-
-  state.selectedProduct =
-    null;
-
-  state.selectedImageIndex =
-    0;
-
-
-  const categorySection =
-    document.querySelector(
-      ".category-filter-section"
-    );
-
-
-  if (categorySection) {
-
-    categorySection.classList.remove(
-      "hidden"
-    );
-
-  }
-
-
-  const container =
+  const products =
     $("#productsContainer");
 
+  const categorySection =
+    $(".category-filter-section");
 
-  if (container) {
-
-    renderProducts();
-
+  if (detail) {
+    detail.style.display = "none";
+    detail.innerHTML = "";
   }
 
+  if (products) {
+    products.style.display = "";
+  }
 
-  const url =
-    new URL(
-      window.location.href
-    );
-
-
-  url.searchParams.delete(
-    "product"
-  );
-
-  url.searchParams.delete(
-    "image"
-  );
-
-
-  window.history.replaceState(
-    {},
-    "",
-    url
-  );
-
+  if (categorySection) {
+    categorySection.style.display = "";
+  }
 
   hideStickyOrder();
 
+  /*
+   * Remove product/image from URL
+   */
+
+  const url =
+    new URL(window.location.href);
+
+  url.searchParams.delete("product");
+  url.searchParams.delete("image");
+
+  window.history.pushState(
+    {},
+    "",
+    url.pathname +
+      url.search +
+      url.hash
+  );
+
+  renderProducts();
 }
 
 
 /* =========================================================
-   UPDATE URL
-========================================================= */
+   PRODUCT URL
+   ========================================================= */
 
 function updateProductUrl(
   productId,
   imageIndex
 ) {
-
   const url =
-    new URL(
-      window.location.href
-    );
-
+    new URL(window.location.href);
 
   url.searchParams.set(
     "product",
     productId
   );
 
-
   url.searchParams.set(
     "image",
-    String(
-      imageIndex
-    )
+    imageIndex
   );
-
 
   window.history.pushState(
     {},
     "",
-    url
+    url.pathname +
+      url.search +
+      url.hash
   );
-
 }
 
 
 /* =========================================================
    DEEP LINK
-========================================================= */
+   ========================================================= */
 
 function handleDeepLink() {
 
-  const params =
-    new URLSearchParams(
-      window.location.search
-    );
-
+  const url =
+    new URL(window.location.href);
 
   const productId =
-    params.get(
-      "product"
-    );
-
-
-  if (!productId) {
-
-    closeSingleProductView();
-
-    return;
-
-  }
-
+    url.searchParams.get("product");
 
   const imageIndex =
     Number(
-      params.get(
-        "image"
-      ) || 0
+      url.searchParams.get("image") || 0
     );
 
+  if (!productId) {
+    return;
+  }
 
   const product =
     state.products.find(
       item =>
-        item.id ===
-        productId
+        String(item.id) ===
+        String(productId)
     );
-
 
   if (!product) {
-
     return;
-
   }
-
 
   openProductDetail(
-    productId,
-    imageIndex,
-    false
+    product,
+    imageIndex
   );
-
 }
 
 
 /* =========================================================
-   STICKY ORDER
-========================================================= */
+   START ORDER FLOW
+   ========================================================= */
 
-function updateStickyOrder(
-  product
+function startOrderFlow(
+  product,
+  imageIndex = 0
 ) {
+  if (!product) return;
 
-  const bar =
-    $("#stickyOrderBar");
+  state.orderProduct = product;
+  state.orderImageIndex =
+    Number(imageIndex || 0);
 
+  /*
+   * Copy current product selections.
+   */
 
-  if (!bar) {
+  state.orderSelections = {
+    ...getSelections(product)
+  };
+
+  /*
+   * IMPORTANT:
+   *
+   * If every variant is already selected,
+   * DO NOT SHOW SELECT OPTIONS POPUP.
+   *
+   * Go directly to customer form.
+   */
+
+  if (allVariantsSelected(product)) {
+
+    openCustomerOrderForm();
+
     return;
   }
 
+  /*
+   * Some variants are missing.
+   * Show popup.
+   */
 
-  state.orderProduct =
-    product;
-
-
-  $("#stickyProductName")
-    .textContent =
-      product.name ||
-      "Product";
-
-
-  $("#stickyProductPrice")
-    .textContent =
-      `₹${formatMoney(
-        calculateProductPrice(
-          product
-        )
-      )}`;
-
-
-  bar.classList.remove(
-    "hidden"
-  );
-
-}
-
-
-function hideStickyOrder() {
-
-  const bar =
-    $("#stickyOrderBar");
-
-
-  if (bar) {
-
-    bar.classList.add(
-      "hidden"
-    );
-
-  }
-
-
-  state.orderProduct =
-    null;
-
+  openVariantSelectionPopup();
 }
 
 
 /* =========================================================
-   ORDER MODAL
-========================================================= */
+   VARIANT POPUP
+   ========================================================= */
 
-function openOrderModal(
-  product
-) {
+function openVariantSelectionPopup() {
 
-  state.orderProduct =
-    product;
+  const product =
+    state.orderProduct;
 
+  if (!product) return;
+
+  let modal =
+    $("#variantSelectionModal");
+
+  if (!modal) {
+
+    modal =
+      document.createElement("div");
+
+    modal.id =
+      "variantSelectionModal";
+
+    modal.className =
+      "catalogue-modal";
+
+    document.body.appendChild(modal);
+  }
+
+  renderVariantPopup(modal);
+
+  modal.style.display = "flex";
+
+  document.body.classList.add(
+    "modal-open"
+  );
+}
+
+
+/* =========================================================
+   RENDER VARIANT POPUP
+   ========================================================= */
+
+function renderVariantPopup(modal) {
+
+  const product =
+    state.orderProduct;
+
+  const groups =
+    getVariantGroups(product);
 
   const price =
     calculateProductPrice(
-      product
+      product,
+      state.orderSelections
     );
-
 
   const images =
-    getImages(
-      product
-    );
-
+    getProductImages(product);
 
   const image =
-    images[
-      state.selectedImageIndex
-    ]?.url ||
-    images[0]?.url ||
+    images[state.orderImageIndex] ||
+    images[0] ||
     product.imageUrl ||
     "";
 
+  modal.innerHTML = `
 
-  const selectedVariants =
-    getSelectedVariantDetails(
-      product
-    );
+    <div class="catalogue-modal-backdrop"
+         data-close-variant-modal>
+    </div>
 
+    <div class="variant-modal-box">
 
-  const variantText =
-    selectedVariants.length
-      ? selectedVariants
-          .map(
-            item =>
-              `${item.label}: ${item.name}`
-          )
-          .join(" • ")
-      : "No variants";
+      <div class="variant-modal-header">
 
+        <div>
+          <h2>
+            Select Options
+          </h2>
 
-  $("#orderSummary")
-    .innerHTML = `
+          <div class="variant-modal-product-name">
+            ${escapeHtml(product.name)}
+          </div>
+        </div>
 
-      ${
-        image
-          ? `
-            <img
-              class="order-summary-image"
-              src="${escapeAttr(
-                image
-              )}"
-              alt=""
-            >
-          `
-          : ""
-      }
+        <button
+          type="button"
+          class="variant-modal-close"
+          data-close-variant-modal
+        >
+          ×
+        </button>
+
+      </div>
 
 
-      <div class="order-summary-info">
+      <div class="variant-product-summary">
 
-        <strong>
-          ${escapeHtml(
-            product.name || ""
-          )}
-        </strong>
+        ${
+          image
+            ? `
+              <img
+                src="${escapeHtml(image)}"
+                alt="${escapeHtml(product.name)}"
+              >
+            `
+            : ""
+        }
 
+        <div>
 
-        <small>
-          ${escapeHtml(
-            variantText
-          )}
-        </small>
+          <div class="variant-summary-name">
+            ${escapeHtml(product.name)}
+          </div>
 
+          <div
+            class="variant-summary-price"
+            id="variantPopupPrice"
+          >
+            ${money(price)}
+          </div>
 
-        <div class="order-summary-price">
-          ₹${formatMoney(
-            price
-          )}
         </div>
 
       </div>
 
-    `;
+
+      <div
+        class="variant-popup-options"
+        id="variantPopupOptions"
+      >
+
+        ${groups.map(group => {
+
+          const selectedId =
+            state.orderSelections[group.id];
+
+          return `
+
+            <div
+              class="popup-variant-group"
+              data-group-id="${escapeHtml(group.id)}"
+            >
+
+              <div class="popup-variant-title">
+                ${escapeHtml(group.name)}
+              </div>
+
+              <div class="popup-variant-options">
+
+                ${group.options.map(option => {
+
+                  const active =
+                    String(selectedId) ===
+                    String(option.id);
+
+                  let priceText = "";
+
+                  if (
+                    Number(option.price || 0) > 0
+                  ) {
+
+                    if (
+                      option.priceType === "percentage" ||
+                      option.priceType === "percent" ||
+                      option.priceType === "%"
+                    ) {
+
+                      priceText =
+                        ` +${option.price}%`;
+
+                    } else {
+
+                      priceText =
+                        ` +${money(option.price)}`;
+
+                    }
+                  }
+
+                  return `
+                    <button
+                      type="button"
+                      class="popup-variant-option ${
+                        active ? "active" : ""
+                      }"
+                      data-group-id="${escapeHtml(group.id)}"
+                      data-option-id="${escapeHtml(option.id)}"
+                    >
+                      ${escapeHtml(option.name)}
+                      ${priceText}
+                    </button>
+                  `;
+
+                }).join("")}
+
+              </div>
+
+            </div>
+
+          `;
+
+        }).join("")}
+
+      </div>
 
 
-  $("#orderMessage")
-    .textContent =
-      "";
+      <div
+        class="variant-popup-error"
+        id="variantPopupError"
+        style="display:none"
+      >
+        Please select an option from every section.
+      </div>
 
 
-  $("#orderModal")
-    .classList.remove(
-      "hidden"
-    );
+      <button
+        type="button"
+        class="variant-continue-btn"
+        id="variantContinueButton"
+      >
+        Continue to Order
+      </button>
 
+    </div>
+  `;
 
-  setTimeout(
-    () =>
-      $("#customerName")
-        ?.focus(),
-    50
-  );
-
+  bindVariantPopupEvents(modal);
 }
 
 
-function closeOrderModal() {
+/* =========================================================
+   VARIANT POPUP EVENTS
+   ========================================================= */
 
-  $("#orderModal")
-    ?.classList.add(
-      "hidden"
+function bindVariantPopupEvents(modal) {
+
+  /*
+   * CLOSE
+   */
+
+  $$(
+    "[data-close-variant-modal]",
+    modal
+  ).forEach(element => {
+
+    element.addEventListener(
+      "click",
+      closeVariantSelectionPopup
     );
 
+  });
+
+
+  /*
+   * VARIANT OPTIONS
+   */
+
+  $$(".popup-variant-option", modal)
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const groupId =
+            button.dataset.groupId;
+
+          const optionId =
+            button.dataset.optionId;
+
+          /*
+           * Save selection
+           */
+
+          state.orderSelections[groupId] =
+            optionId;
+
+          /*
+           * Make clicked option active
+           */
+
+          const group =
+            button.closest(
+              ".popup-variant-group"
+            );
+
+          if (group) {
+
+            $$(".popup-variant-option", group)
+              .forEach(item => {
+
+                item.classList.toggle(
+                  "active",
+                  item === button
+                );
+
+              });
+
+          }
+
+          /*
+           * LIVE PRICE UPDATE
+           */
+
+          const price =
+            calculateProductPrice(
+              state.orderProduct,
+              state.orderSelections
+            );
+
+          const priceElement =
+            $("#variantPopupPrice");
+
+          if (priceElement) {
+            priceElement.textContent =
+              money(price);
+          }
+
+          /*
+           * Remove validation error
+           */
+
+          const error =
+            $("#variantPopupError");
+
+          if (error) {
+            error.style.display = "none";
+          }
+
+        }
+      );
+
+    });
+
+
+  /*
+   * CONTINUE
+   */
+
+  const continueButton =
+    $("#variantContinueButton");
+
+  if (continueButton) {
+
+    continueButton.addEventListener(
+      "click",
+      () => {
+
+        const product =
+          state.orderProduct;
+
+        /*
+         * Check all groups
+         */
+
+        const groups =
+          getVariantGroups(product);
+
+        const missing =
+          groups.filter(group => {
+
+            const selected =
+              state.orderSelections[group.id];
+
+            return !selected;
+          });
+
+        if (missing.length) {
+
+          const error =
+            $("#variantPopupError");
+
+          if (error) {
+            error.style.display =
+              "block";
+          }
+
+          return;
+        }
+
+        /*
+         * Save selected options back to
+         * product state.
+         */
+
+        state.variantSelections[
+          product.id
+        ] = {
+          ...state.orderSelections
+        };
+
+        /*
+         * Now open customer form.
+         */
+
+        closeVariantSelectionPopup();
+
+        openCustomerOrderForm();
+
+      }
+    );
+
+  }
+}
+
+
+/* =========================================================
+   CLOSE VARIANT POPUP
+   ========================================================= */
+
+function closeVariantSelectionPopup() {
+
+  const modal =
+    $("#variantSelectionModal");
+
+  if (modal) {
+    modal.style.display = "none";
+  }
+
+  document.body.classList.remove(
+    "modal-open"
+  );
+}
+
+
+/* =========================================================
+   CUSTOMER ORDER FORM
+   ========================================================= */
+
+function openCustomerOrderForm() {
+
+  const product =
+    state.orderProduct;
+
+  if (!product) return;
+
+  /*
+   * Make sure latest selections are used.
+   */
+
+  state.orderSelections = {
+    ...(
+      state.variantSelections[product.id] ||
+      state.orderSelections ||
+      {}
+    )
+  };
+
+  const price =
+    calculateProductPrice(
+      product,
+      state.orderSelections
+    );
+
+  const variants =
+    getSelectedVariantDetails(
+      product,
+      state.orderSelections
+    );
+
+  let modal =
+    $("#orderModal");
+
+  /*
+   * Existing HTML modal
+   */
+
+  if (!modal) {
+
+    modal =
+      document.createElement("div");
+
+    modal.id =
+      "orderModal";
+
+    modal.className =
+      "catalogue-modal";
+
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+
+    <div class="catalogue-modal-backdrop"
+         data-close-order-modal>
+    </div>
+
+    <div class="order-modal-box">
+
+      <div class="order-modal-header">
+
+        <div>
+          <h2>
+            Your Details
+          </h2>
+
+          <div class="order-product-name">
+            ${escapeHtml(product.name)}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="order-modal-close"
+          data-close-order-modal
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div class="order-summary">
+
+        <div>
+          <strong>
+            ${escapeHtml(product.name)}
+          </strong>
+        </div>
+
+        <div>
+          ${variants.map(item => `
+            <div>
+              ${escapeHtml(item.groupName)}:
+              ${escapeHtml(item.optionName)}
+            </div>
+          `).join("")}
+        </div>
+
+        <div class="order-summary-final-price">
+          ${money(price)}
+        </div>
+
+      </div>
+
+
+      <form id="orderForm">
+
+        <div class="form-field">
+
+          <label>
+            Name
+          </label>
+
+          <input
+            id="customerName"
+            type="text"
+            required
+            autocomplete="name"
+            placeholder="Enter your name"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label>
+            Mobile Number
+          </label>
+
+          <input
+            id="customerPhone"
+            type="tel"
+            required
+            inputmode="numeric"
+            autocomplete="tel"
+            placeholder="Enter mobile number"
+          >
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label>
+            Address
+          </label>
+
+          <textarea
+            id="customerAddress"
+            required
+            autocomplete="street-address"
+            placeholder="Enter complete address"
+          ></textarea>
+
+        </div>
+
+
+        <div class="form-field">
+
+          <label>
+            Pincode
+          </label>
+
+          <input
+            id="customerPincode"
+            type="text"
+            required
+            inputmode="numeric"
+            autocomplete="postal-code"
+            maxlength="6"
+            placeholder="Enter pincode"
+          >
+
+        </div>
+
+
+        <div
+          id="orderMessage"
+          class="order-message"
+          style="display:none"
+        ></div>
+
+
+        <button
+          type="submit"
+          id="submitOrderBtn"
+          class="submit-order-btn"
+        >
+          Place Order
+        </button>
+
+      </form>
+
+    </div>
+  `;
+
+  modal.style.display = "flex";
+
+  document.body.classList.add(
+    "modal-open"
+  );
+
+  bindCustomerOrderEvents();
+}
+
+
+/* =========================================================
+   CUSTOMER ORDER EVENTS
+   ========================================================= */
+
+function bindCustomerOrderEvents() {
+
+  const modal =
+    $("#orderModal");
+
+  if (!modal) return;
+
+  /*
+   * CLOSE
+   */
+
+  $$(
+    "[data-close-order-modal]",
+    modal
+  ).forEach(element => {
+
+    element.addEventListener(
+      "click",
+      closeCustomerOrderForm
+    );
+
+  });
+
+
+  /*
+   * FORM
+   */
+
+  const form =
+    $("#orderForm");
+
+  if (!form) return;
+
+  form.addEventListener(
+    "submit",
+    submitOrder
+  );
+}
+
+
+/* =========================================================
+   VALIDATE CUSTOMER
+   ========================================================= */
+
+function validatePhone(phone) {
+
+  const clean =
+    String(phone)
+      .replace(/\D/g, "");
+
+  return (
+    clean.length >= 10 &&
+    clean.length <= 12
+  );
+}
+
+
+function validatePincode(pin) {
+
+  return /^\d{6}$/.test(
+    String(pin).trim()
+  );
+}
+
+
+/* =========================================================
+   GENERATE LOCAL ORDER ID
+   ========================================================= */
+
+function generateOrderReference() {
+
+  const timestamp =
+    Date.now()
+      .toString(36)
+      .toUpperCase();
+
+  const random =
+    Math.random()
+      .toString(36)
+      .substring(2, 7)
+      .toUpperCase();
+
+  return `IG-${timestamp}-${random}`;
 }
 
 
 /* =========================================================
    SUBMIT ORDER
-========================================================= */
+   ========================================================= */
 
-async function submitOrder(
-  event
-) {
+async function submitOrder(event) {
 
   event.preventDefault();
 
-
   const product =
     state.orderProduct;
-
 
   if (!product) {
     return;
   }
 
-
   const name =
-    $("#customerName")
-      .value
-      .trim();
-
+    String(
+      $("#customerName")?.value || ""
+    ).trim();
 
   const phone =
-    $("#customerPhone")
-      .value
-      .trim();
-
+    String(
+      $("#customerPhone")?.value || ""
+    ).trim();
 
   const address =
-    $("#customerAddress")
-      .value
-      .trim();
-
+    String(
+      $("#customerAddress")?.value || ""
+    ).trim();
 
   const pincode =
-    $("#customerPincode")
-      .value
-      .trim();
+    String(
+      $("#customerPincode")?.value || ""
+    ).trim();
 
+
+  /*
+   * Validation
+   */
 
   const message =
     $("#orderMessage");
 
-
-  const submit =
-    $("#submitOrderBtn");
-
-
-  if (
-    !/^[0-9]{10}$/.test(
-      phone
-    )
-  ) {
-
-    message.textContent =
-      "Please enter a valid 10 digit mobile number.";
-
+  if (!name) {
+    showOrderMessage(
+      "Please enter your name."
+    );
     return;
-
   }
 
-
-  if (
-    !/^[0-9]{6}$/.test(
-      pincode
-    )
-  ) {
-
-    message.textContent =
-      "Please enter a valid 6 digit PIN code.";
-
+  if (!validatePhone(phone)) {
+    showOrderMessage(
+      "Please enter a valid mobile number."
+    );
     return;
+  }
 
+  if (!address) {
+    showOrderMessage(
+      "Please enter your complete address."
+    );
+    return;
+  }
+
+  if (!validatePincode(pincode)) {
+    showOrderMessage(
+      "Please enter a valid 6 digit pincode."
+    );
+    return;
   }
 
 
   /*
-    Extra safety:
-    make sure all variants are selected
-    before submitting.
-  */
+   * Current selections
+   */
 
-  const groups =
-    getVariantGroups(
-      product
-    );
+  const selections = {
+    ...(
+      state.variantSelections[product.id] ||
+      state.orderSelections ||
+      {}
+    )
+  };
 
+  /*
+   * Make absolutely sure every group
+   * is selected.
+   */
 
-  const selected =
-    state.selectedVariants[
-      product.id
-    ] || {};
+  if (!allVariantsSelectedUsingSelections(
+    product,
+    selections
+  )) {
 
-
-  const missing =
-    groups.find(
-      group =>
-        !selected[
-          group.key
-        ]
-    );
-
-
-  if (missing) {
-
-    closeOrderModal();
-
-    openVariantSelectionPopup(
-      product
+    showOrderMessage(
+      "Please select all product options."
     );
 
     return;
-
   }
 
 
-  submit.disabled =
-    true;
+  /*
+   * Final price
+   */
 
-  submit.textContent =
-    "Creating Order...";
+  const finalPrice =
+    calculateProductPrice(
+      product,
+      selections
+    );
 
 
-  message.textContent =
-    "";
+  /*
+   * Selected variants
+   */
+
+  const variants =
+    getSelectedVariantDetails(
+      product,
+      selections
+    );
+
+
+  /*
+   * Clicked image
+   */
+
+  const imageUrl =
+    getProductImage(
+      product,
+      state.orderImageIndex
+    );
+
+
+  /*
+   * Product link
+   */
+
+  const productLink =
+    buildProductLink(
+      product.id,
+      state.orderImageIndex
+    );
+
+
+  /*
+   * Local order reference.
+   *
+   * Backend will also return its stored
+   * order ID. This reference is sent so
+   * WhatsApp and admin can identify the
+   * same order even if the request fails.
+   */
+
+  const clientOrderId =
+    generateOrderReference();
+
+  state.orderId =
+    clientOrderId;
+
+
+  /*
+   * Full order object
+   */
+
+  const orderPayload = {
+
+    id: clientOrderId,
+
+    customer: {
+      name,
+      phone,
+      address,
+      pincode
+    },
+
+    product: {
+
+      id: product.id,
+
+      name: product.name,
+
+      description:
+        product.description || "",
+
+      image:
+        imageUrl || "",
+
+      imageIndex:
+        state.orderImageIndex,
+
+      imageUrl:
+        imageUrl || "",
+
+      productLink,
+
+      basePrice:
+        Number(product.price || 0),
+
+      price:
+        finalPrice,
+
+      finalPrice,
+
+      variants,
+
+      selections,
+
+      /*
+       * Keep simple fields too for
+       * compatibility with old Worker.
+       */
+
+      colour:
+        getSimpleVariantValue(
+          variants,
+          "colour"
+        ),
+
+      size:
+        getSimpleVariantValue(
+          variants,
+          "size"
+        )
+    },
+
+    orderId:
+      clientOrderId,
+
+    createdAt:
+      Date.now()
+  };
+
+
+  /*
+   * Disable button
+   */
+
+  const submitButton =
+    $("#submitOrderBtn");
+
+  if (submitButton) {
+
+    submitButton.disabled =
+      true;
+
+    submitButton.textContent =
+      "Saving Order...";
+  }
 
 
   try {
 
-    const price =
-      calculateProductPrice(
-        product
-      );
-
-
-    const images =
-      getImages(
-        product
-      );
-
-
-    const clickedImage =
-      images[
-        state.selectedImageIndex
-      ]?.url ||
-      images[0]?.url ||
-      product.imageUrl ||
-      "";
-
-
-    const selectedVariants =
-      getSelectedVariantDetails(
-        product
-      );
-
-
-    const variantObject =
-      {};
-
-
-    selectedVariants
-      .forEach(
-        item => {
-
-          variantObject[
-            item.label
-          ] =
-            item.name;
-
-        }
-      );
-
-
-    const productLink =
-      new URL(
-        window.location.href
-      );
-
-
-    productLink.searchParams.set(
-      "product",
-      product.id
-    );
-
-
-    productLink.searchParams.set(
-      "image",
-      String(
-        state.selectedImageIndex
-      )
-    );
-
-
-    productLink.hash =
-      "";
-
+    /*
+     * SAVE TO D1
+     */
 
     const response =
-      await fetch(
+      await api(
         "/api/orders",
         {
           method: "POST",
@@ -3455,109 +2571,37 @@ async function submitOrder(
           },
 
           body:
-            JSON.stringify({
-
-              customer: {
-
-                name,
-
-                phone,
-
-                address,
-
-                pincode
-
-              },
-
-
-              product: {
-
-                id:
-                  product.id,
-
-                name:
-                  product.name,
-
-                image:
-                  clickedImage,
-
-                colour:
-                  variantObject.Colour ||
-                  "",
-
-                size:
-                  variantObject.Size ||
-                  "",
-
-                price,
-
-                variants:
-                  variantObject,
-
-                productLink:
-                  productLink.toString()
-
-              }
-
-            })
-
+            JSON.stringify(
+              orderPayload
+            )
         }
       );
 
 
-    let data =
-      null;
+    /*
+     * Backend order ID has priority.
+     */
+
+    const savedOrderId =
+      response?.orderId ||
+      response?.id ||
+      clientOrderId;
+
+    state.orderId =
+      savedOrderId;
 
 
-    try {
-
-      data =
-        await response.json();
-
-    } catch {}
-
-
-    if (!response.ok) {
-
-      throw new Error(
-        data?.error ||
-        "Could not create order."
-      );
-
-    }
-
-
-    const orderId =
-      data?.orderId ||
-      data?.id ||
-      `IG-${Date.now()}`;
-
+    /*
+     * WhatsApp
+     */
 
     const whatsappMessage =
-      buildWhatsAppMessage({
-
-        orderId,
-
-        name,
-
-        phone,
-
-        address,
-
-        pincode,
-
-        product,
-
-        price,
-
-        clickedImage,
-
-        selectedVariants,
-
-        productLink:
-          productLink.toString()
-
-      });
+      buildWhatsAppMessage(
+        {
+          ...orderPayload,
+          orderId: savedOrderId
+        }
+      );
 
 
     const whatsappUrl =
@@ -3567,118 +2611,446 @@ async function submitOrder(
       )}`;
 
 
-    closeOrderModal();
+    /*
+     * Close form
+     */
 
+    closeCustomerOrderForm();
+
+
+    /*
+     * Open WhatsApp
+     */
 
     window.location.href =
       whatsappUrl;
 
-
   } catch (error) {
 
     console.error(
-      "Order error:",
+      "Order saving failed:",
       error
     );
 
+    showOrderMessage(
+      "Unable to save order. Please try again."
+    );
 
-    message.textContent =
-      error.message;
+    if (submitButton) {
 
-  } finally {
+      submitButton.disabled =
+        false;
 
-    submit.disabled =
-      false;
+      submitButton.textContent =
+        "Place Order";
+    }
+  }
+}
 
-    submit.textContent =
-      "Order on WhatsApp";
 
+/* =========================================================
+   CHECK SELECTIONS
+   ========================================================= */
+
+function allVariantsSelectedUsingSelections(
+  product,
+  selections
+) {
+
+  const groups =
+    getVariantGroups(product);
+
+  if (!groups.length) {
+    return true;
   }
 
+  return groups.every(group => {
+
+    const selected =
+      selections[group.id];
+
+    return Boolean(
+      selected &&
+      group.options.some(
+        option =>
+          String(option.id) ===
+          String(selected)
+      )
+    );
+
+  });
+}
+
+
+/* =========================================================
+   SIMPLE VARIANT VALUE
+   ========================================================= */
+
+function getSimpleVariantValue(
+  variants,
+  groupName
+) {
+
+  const found =
+    variants.find(
+      item =>
+        String(item.groupName)
+          .toLowerCase() ===
+        String(groupName)
+          .toLowerCase()
+    );
+
+  return found
+    ? found.optionName
+    : "";
+}
+
+
+/* =========================================================
+   PRODUCT LINK
+   ========================================================= */
+
+function buildProductLink(
+  productId,
+  imageIndex = 0
+) {
+
+  const url =
+    new URL(
+      window.location.origin +
+      window.location.pathname
+    );
+
+  url.searchParams.set(
+    "product",
+    productId
+  );
+
+  url.searchParams.set(
+    "image",
+    imageIndex
+  );
+
+  return url.toString();
 }
 
 
 /* =========================================================
    WHATSAPP MESSAGE
-========================================================= */
+   ========================================================= */
 
-function buildWhatsAppMessage(
-  data
-) {
+function buildWhatsAppMessage(order) {
+
+  const product =
+    order.product;
 
   const variants =
-    data.selectedVariants;
+    Array.isArray(product.variants)
+      ? product.variants
+      : [];
 
+  let message =
+`*NEW ORDER - IMAGINARY GIFTS*
 
-  let variantText =
-    "None";
+*Order ID:* ${order.orderId}
 
+*CUSTOMER DETAILS*
+Name: ${order.customer.name}
+Mobile: ${order.customer.phone}
+Address: ${order.customer.address}
+Pincode: ${order.customer.pincode}
 
-  if (
-    variants.length
-  ) {
+*PRODUCT DETAILS*
+Product: ${product.name}
+Product ID: ${product.id}
+Base Price: ${money(product.basePrice)}
+Final Price: ${money(product.finalPrice)}
 
-    variantText =
-      variants
-        .map(
-          item =>
-            `${item.label}: ${item.name}`
-        )
-        .join("\n");
+*SELECTED OPTIONS*`;
 
+  if (variants.length) {
+
+    variants.forEach(item => {
+
+      message +=
+        `\n${item.groupName}: ${item.optionName}`;
+
+    });
+
+  } else {
+
+    message +=
+      "\nNo variants";
   }
 
 
-  return `
-🛍️ *NEW ORDER — IMAGINARY GIFTS*
+  message +=
+`
 
-━━━━━━━━━━━━━━━━━━
+*PRODUCT IMAGE*
+${product.imageUrl || "Not available"}
 
-🆔 *Order ID*
-${data.orderId}
+*PRODUCT LINK*
+${product.productLink}
 
-━━━━━━━━━━━━━━━━━━
+Please confirm this order.`;
 
-👤 *CUSTOMER DETAILS*
+  return message;
+}
 
-Name: ${data.name}
-Mobile: ${data.phone}
 
-Address:
-${data.address}
+/* =========================================================
+   ORDER MESSAGE
+   ========================================================= */
 
-PIN Code: ${data.pincode}
+function showOrderMessage(
+  text
+) {
 
-━━━━━━━━━━━━━━━━━━
+  const element =
+    $("#orderMessage");
 
-📦 *PRODUCT DETAILS*
+  if (!element) {
+    alert(text);
+    return;
+  }
 
-Product:
-${data.product.name}
+  element.textContent =
+    text;
 
-Price:
-₹${formatMoney(
-    data.price
-  )}
+  element.style.display =
+    "block";
+}
 
-Variants:
-${variantText}
 
-━━━━━━━━━━━━━━━━━━
+/* =========================================================
+   CLOSE CUSTOMER FORM
+   ========================================================= */
 
-🖼️ *PRODUCT IMAGE*
+function closeCustomerOrderForm() {
 
-${data.clickedImage}
+  const modal =
+    $("#orderModal");
 
-━━━━━━━━━━━━━━━━━━
+  if (modal) {
+    modal.style.display = "none";
+  }
 
-🔗 *PRODUCT LINK*
+  document.body.classList.remove(
+    "modal-open"
+  );
+}
 
-${data.productLink}
 
-━━━━━━━━━━━━━━━━━━
+/* =========================================================
+   STICKY ORDER BAR
+   ========================================================= */
 
-Please confirm the order.
-`.trim();
+function showStickyOrder(
+  product,
+  price
+) {
+
+  let bar =
+    $("#stickyOrderBar");
+
+  if (!bar) {
+    return;
+  }
+
+  bar.style.display =
+    "flex";
+
+  const name =
+    $("#stickyProductName");
+
+  const priceElement =
+    $("#stickyProductPrice");
+
+  if (name) {
+    name.textContent =
+      product.name;
+  }
+
+  if (priceElement) {
+    priceElement.textContent =
+      money(price);
+  }
+
+  const button =
+    $("#stickyOrderButton");
+
+  if (button) {
+
+    button.onclick =
+      () => {
+
+        startOrderFlow(
+          product,
+          state.selectedImageIndex
+        );
+
+      };
+
+  }
+}
+
+
+function hideStickyOrder() {
+
+  const bar =
+    $("#stickyOrderBar");
+
+  if (bar) {
+    bar.style.display =
+      "none";
+  }
+}
+
+
+/* =========================================================
+   UPDATE STICKY PRICE
+   ========================================================= */
+
+function updateStickyPrice(
+  product
+) {
+
+  const price =
+    calculateProductPrice(product);
+
+  const priceElement =
+    $("#stickyProductPrice");
+
+  if (priceElement) {
+    priceElement.textContent =
+      money(price);
+  }
+}
+
+
+/* =========================================================
+   POPSTATE
+   ========================================================= */
+
+window.addEventListener(
+  "popstate",
+  () => {
+
+    const url =
+      new URL(
+        window.location.href
+      );
+
+    const productId =
+      url.searchParams.get(
+        "product"
+      );
+
+    if (!productId) {
+
+      if (state.productViewOpen) {
+        closeSingleProductView();
+      }
+
+      return;
+    }
+
+    const product =
+      state.products.find(
+        item =>
+          String(item.id) ===
+          String(productId)
+      );
+
+    if (!product) {
+      return;
+    }
+
+    const image =
+      Number(
+        url.searchParams.get(
+          "image"
+        ) || 0
+      );
+
+    state.selectedProduct =
+      product;
+
+    state.selectedImageIndex =
+      image;
+
+    state.productViewOpen =
+      true;
+
+    renderProductDetail();
+
+  }
+);
+
+
+/* =========================================================
+   INITIALIZE
+   ========================================================= */
+
+async function initCatalogue() {
+
+  try {
+
+    await Promise.all([
+      loadProducts(),
+      loadCategories()
+    ]);
+
+    /*
+     * Handle:
+     *
+     * /?product=PRODUCT_ID&image=2
+     */
+
+    handleDeepLink();
+
+  } catch (error) {
+
+    console.error(
+      "Catalogue initialization failed:",
+      error
+    );
+
+    const container =
+      $("#productsContainer");
+
+    if (container) {
+
+      container.innerHTML = `
+        <div class="empty-products">
+          Unable to load products.
+          Please refresh the page.
+        </div>
+      `;
+
+    }
+
+  }
+}
+
+
+/* =========================================================
+   START
+   ========================================================= */
+
+if (
+  document.readyState ===
+  "loading"
+) {
+
+  document.addEventListener(
+    "DOMContentLoaded",
+    initCatalogue
+  );
+
+} else {
+
+  initCatalogue();
 
 }
