@@ -10,14 +10,12 @@
 const CONFIG = {
 
   /*
-    IMPORTANT:
-    Replace this with the WhatsApp number that
-    should receive customer orders.
+    Replace with your WhatsApp number.
 
-    India example:
+    Example:
     919876543210
 
-    Do NOT put +, spaces or hyphens.
+    No +, spaces or hyphens.
   */
 
   whatsappNumber:
@@ -44,13 +42,20 @@ const state = {
 
   selectedVariants: {},
 
-  orderProduct: null
+  orderProduct: null,
+
+  /*
+    true when customer is viewing
+    a single product page.
+  */
+
+  productViewOpen: false
 
 };
 
 
 /* =========================================================
-   HELPERS
+   BASIC HELPERS
 ========================================================= */
 
 const $ = selector =>
@@ -110,10 +115,26 @@ function escapeAttr(value) {
 }
 
 
+function clone(value) {
+
+  return JSON.parse(
+    JSON.stringify(
+      value
+    )
+  );
+
+}
+
+
+/* =========================================================
+   GET PRODUCT IMAGES
+========================================================= */
+
 function getImages(product) {
 
   const images =
     product?.data?.images;
+
 
   if (
     !Array.isArray(images)
@@ -122,6 +143,7 @@ function getImages(product) {
     return [];
 
   }
+
 
   return images
     .map(item => {
@@ -138,15 +160,19 @@ function getImages(product) {
 
       }
 
+
       return {
+
         url:
           item.url ||
           item.imageUrl ||
           "",
+
         key:
           item.key ||
           item.objectKey ||
           ""
+
       };
 
     })
@@ -157,6 +183,10 @@ function getImages(product) {
 
 }
 
+
+/* =========================================================
+   CATEGORY
+========================================================= */
 
 function getProductCategoryId(
   product
@@ -182,6 +212,7 @@ function getCategoryName(
         categoryId
     );
 
+
   return (
     category?.name ||
     ""
@@ -204,10 +235,12 @@ async function init() {
 
   bindEvents();
 
+
   await Promise.all([
     loadCategories(),
     loadProducts()
   ]);
+
 
   handleDeepLink();
 
@@ -267,7 +300,7 @@ function bindEvents() {
           state.orderProduct
         ) {
 
-          openOrderModal(
+          startOrderProcess(
             state.orderProduct
           );
 
@@ -293,6 +326,10 @@ function handleGlobalClick(
   event
 ) {
 
+  /* ---------------------------------------------
+     CATEGORY
+  --------------------------------------------- */
+
   const categoryButton =
     event.target.closest(
       ".category-pill"
@@ -301,18 +338,19 @@ function handleGlobalClick(
 
   if (categoryButton) {
 
-    const categoryId =
-      categoryButton.dataset.categoryId ||
-      "";
-
     selectCategory(
-      categoryId
+      categoryButton.dataset.categoryId ||
+      ""
     );
 
     return;
 
   }
 
+
+  /* ---------------------------------------------
+     PRODUCT IMAGE
+  --------------------------------------------- */
 
   const image =
     event.target.closest(
@@ -322,24 +360,21 @@ function handleGlobalClick(
 
   if (image) {
 
-    const productId =
-      image.dataset.productId;
-
-    const imageIndex =
-      Number(
-        image.dataset.imageIndex
-      );
-
-
     openProductDetail(
-      productId,
-      imageIndex
+      image.dataset.productId,
+      Number(
+        image.dataset.imageIndex || 0
+      )
     );
 
     return;
 
   }
 
+
+  /* ---------------------------------------------
+     DETAIL THUMBNAIL
+  --------------------------------------------- */
 
   const thumbnail =
     event.target.closest(
@@ -349,24 +384,21 @@ function handleGlobalClick(
 
   if (thumbnail) {
 
-    const productId =
-      thumbnail.dataset.productId;
-
-    const imageIndex =
-      Number(
-        thumbnail.dataset.imageIndex
-      );
-
-
     openProductDetail(
-      productId,
-      imageIndex
+      thumbnail.dataset.productId,
+      Number(
+        thumbnail.dataset.imageIndex || 0
+      )
     );
 
     return;
 
   }
 
+
+  /* ---------------------------------------------
+     PRODUCT ORDER
+  --------------------------------------------- */
 
   const orderButton =
     event.target.closest(
@@ -376,17 +408,45 @@ function handleGlobalClick(
 
   if (orderButton) {
 
-    const productId =
-      orderButton.dataset.productId;
-
-    openOrderForProduct(
-      productId
+    startOrderProcess(
+      orderButton.dataset.productId
     );
 
     return;
 
   }
 
+
+  /* ---------------------------------------------
+     STICKY ORDER
+  --------------------------------------------- */
+
+  const stickyButton =
+    event.target.closest(
+      "#stickyOrderBtn"
+    );
+
+
+  if (stickyButton) {
+
+    if (
+      state.orderProduct
+    ) {
+
+      startOrderProcess(
+        state.orderProduct
+      );
+
+    }
+
+    return;
+
+  }
+
+
+  /* ---------------------------------------------
+     OTHER PRODUCT
+  --------------------------------------------- */
 
   const otherProduct =
     event.target.closest(
@@ -396,16 +456,19 @@ function handleGlobalClick(
 
   if (otherProduct) {
 
-    const productId =
-      otherProduct.dataset.productId;
-
     openProductDetail(
-      productId,
+      otherProduct.dataset.productId,
       0
     );
 
+    return;
+
   }
 
+
+  /* ---------------------------------------------
+     VARIANT
+  --------------------------------------------- */
 
   const variantButton =
     event.target.closest(
@@ -418,6 +481,67 @@ function handleGlobalClick(
     handleVariantSelection(
       variantButton
     );
+
+    return;
+
+  }
+
+
+  /* ---------------------------------------------
+     VARIANT POPUP OPTION
+  --------------------------------------------- */
+
+  const popupOption =
+    event.target.closest(
+      ".order-variant-option"
+    );
+
+
+  if (popupOption) {
+
+    handleOrderVariantSelection(
+      popupOption
+    );
+
+    return;
+
+  }
+
+
+  /* ---------------------------------------------
+     VARIANT POPUP CONTINUE
+  --------------------------------------------- */
+
+  const continueButton =
+    event.target.closest(
+      "#continueVariantOrderBtn"
+    );
+
+
+  if (continueButton) {
+
+    continueOrderAfterVariantSelection();
+
+    return;
+
+  }
+
+
+  /* ---------------------------------------------
+     VARIANT POPUP CLOSE
+  --------------------------------------------- */
+
+  const closeVariantButton =
+    event.target.closest(
+      "#closeVariantPopup"
+    );
+
+
+  if (closeVariantButton) {
+
+    closeVariantPopup();
+
+    return;
 
   }
 
@@ -474,6 +598,7 @@ async function loadCategories() {
             999999
           );
 
+
         const orderB =
           Number(
             b.sort_order ??
@@ -509,12 +634,13 @@ async function loadCategories() {
 
     renderCategoryPills();
 
-
   } catch (error) {
 
     console.error(
+      "Category load error:",
       error
     );
+
 
     renderCategoryPills();
 
@@ -611,6 +737,9 @@ function selectCategory(
   categoryId
 ) {
 
+  closeSingleProductView();
+
+
   state.selectedCategory =
     categoryId || "";
 
@@ -636,6 +765,11 @@ async function loadProducts() {
 
   const container =
     $("#productsContainer");
+
+
+  if (!container) {
+    return;
+  }
 
 
   container.innerHTML = `
@@ -676,11 +810,6 @@ async function loadProducts() {
           : [];
 
 
-    /*
-      Frontend should only show
-      active products.
-    */
-
     state.products =
       state.products.filter(
         product =>
@@ -689,7 +818,6 @@ async function loadProducts() {
 
 
     renderProducts();
-
 
   } catch (error) {
 
@@ -706,6 +834,10 @@ async function loadProducts() {
           ⚠️
         </div>
 
+        <strong>
+          Could not load products
+        </strong>
+
         <p>
           ${escapeHtml(
             error.message
@@ -721,7 +853,7 @@ async function loadProducts() {
 
 
 /* =========================================================
-   FILTERED PRODUCTS
+   FILTER
 ========================================================= */
 
 function getFilteredProducts() {
@@ -756,6 +888,11 @@ function renderProducts() {
 
   const container =
     $("#productsContainer");
+
+
+  if (!container) {
+    return;
+  }
 
 
   const products =
@@ -886,6 +1023,7 @@ function renderProductCard(
             )}
           </h2>
 
+
           <div
             class="product-price"
             data-product-price="${escapeAttr(
@@ -896,6 +1034,7 @@ function renderProductCard(
               price
             )}
           </div>
+
 
           ${
             product.description
@@ -946,14 +1085,6 @@ function renderProductCard(
           : ""
       }
 
-
-      <div
-        class="product-detail hidden"
-        id="detail-${escapeAttr(
-          product.id
-        )}"
-      ></div>
-
     </article>
 
   `;
@@ -962,7 +1093,7 @@ function renderProductCard(
 
 
 /* =========================================================
-   VARIANTS
+   PRODUCT VARIANTS
 ========================================================= */
 
 function renderProductVariants(
@@ -1083,9 +1214,7 @@ function renderVariantGroup(
       </span>
 
 
-      <div
-        class="variant-options"
-      >
+      <div class="variant-options">
 
         ${options
           .map(
@@ -1130,6 +1259,7 @@ function renderVariantGroup(
                     option.price || 0
                   )}"
                 >
+
                   ${escapeHtml(
                     option.name ||
                     "Option"
@@ -1172,6 +1302,9 @@ function renderVariantGroup(
 
 /* =========================================================
    VARIANT SELECTION
+   IMPORTANT:
+   DO NOT RE-RENDER THE CARD.
+   This preserves horizontal scroll.
 ========================================================= */
 
 function handleVariantSelection(
@@ -1208,18 +1341,78 @@ function handleVariantSelection(
 
 
   /*
-    Re-render this product so
-    selected state + price update.
+    Only change selected classes
+    inside this variant group.
+
+    We intentionally DO NOT call
+    renderProductCard() here.
+
+    Therefore horizontal scroll
+    position stays exactly where
+    customer clicked.
   */
 
-  refreshProductCard(
+  const card =
+    document.querySelector(
+      `[data-product-card="${CSS.escape(
+        productId
+      )}"]`
+    );
+
+
+  if (card) {
+
+    card
+      .querySelectorAll(
+        `.variant-option[data-variant-group="${CSS.escape(
+          group
+        )}"]`
+      )
+      .forEach(
+        option => {
+
+          option.classList.toggle(
+            "selected",
+            option === button
+          );
+
+        }
+      );
+
+  }
+
+
+  updatePriceDisplays(
     productId
   );
+
+
+  /*
+    If this product is currently
+    open in single-product mode,
+    update its detail price only.
+  */
+
+  if (
+    state.productViewOpen &&
+    state.selectedProduct?.id ===
+      productId
+  ) {
+
+    updateDetailPrice(
+      productId
+    );
+
+  }
 
 }
 
 
-function refreshProductCard(
+/* =========================================================
+   UPDATE PRICE
+========================================================= */
+
+function updatePriceDisplays(
   productId
 ) {
 
@@ -1236,55 +1429,43 @@ function refreshProductCard(
   }
 
 
-  const oldCard =
-    document.querySelector(
-      `[data-product-card="${CSS.escape(
-        productId
-      )}"]`
-    );
-
-
-  if (!oldCard) {
-    return;
-  }
-
-
-  const wrapper =
-    document.createElement(
-      "div"
-    );
-
-
-  wrapper.innerHTML =
-    renderProductCard(
+  const price =
+    calculateProductPrice(
       product
     );
 
 
-  const newCard =
-    wrapper.firstElementChild;
+  document
+    .querySelectorAll(
+      `[data-product-price="${CSS.escape(
+        productId
+      )}"]`
+    )
+    .forEach(
+      element => {
 
+        element.textContent =
+          `₹${formatMoney(
+            price
+          )}`;
 
-  oldCard.replaceWith(
-    newCard
-  );
+      }
+    );
 
-
-  /*
-    If this product is currently
-    open, restore its detail view.
-  */
 
   if (
-    state.selectedProduct?.id ===
+    state.orderProduct?.id ===
     productId
   ) {
 
-    openProductDetail(
-      productId,
-      state.selectedImageIndex,
-      false
-    );
+    $("#stickyProductPrice")
+      ?.replaceChildren(
+        document.createTextNode(
+          `₹${formatMoney(
+            price
+          )}`
+        )
+      );
 
   }
 
@@ -1312,9 +1493,7 @@ function calculateProductPrice(
 
 
   const applyOption =
-    (
-      option
-    ) => {
+    option => {
 
       if (!option) {
         return;
@@ -1361,12 +1540,8 @@ function calculateProductPrice(
     [];
 
 
-  const selectedColour =
-    selected.colours;
-
-
   if (
-    selectedColour
+    selected.colours
   ) {
 
     applyOption(
@@ -1376,19 +1551,15 @@ function calculateProductPrice(
             option.id ||
             option.name
           ) ===
-          selectedColour
+          selected.colours
       )
     );
 
   }
 
 
-  const selectedSize =
-    selected.sizes;
-
-
   if (
-    selectedSize
+    selected.sizes
   ) {
 
     applyOption(
@@ -1398,7 +1569,7 @@ function calculateProductPrice(
             option.id ||
             option.name
           ) ===
-          selectedSize
+          selected.sizes
       )
     );
 
@@ -1450,7 +1621,7 @@ function calculateProductPrice(
 
 
 /* =========================================================
-   GET SELECTED VARIANT DETAILS
+   GET SELECTED VARIANTS
 ========================================================= */
 
 function getSelectedVariantDetails(
@@ -1466,51 +1637,55 @@ function getSelectedVariantDetails(
   const result = [];
 
 
-  const addSelected =
-    (
-      label,
-      groupKey,
-      options
-    ) => {
+  function addSelected(
+    label,
+    groupKey,
+    options
+  ) {
 
-      const selectedId =
-        selected[groupKey];
-
-
-      if (!selectedId) {
-        return;
-      }
+    const selectedId =
+      selected[groupKey];
 
 
-      const option =
-        options.find(
-          item =>
-            (
-              item.id ||
-              item.name
-            ) ===
-            selectedId
-        );
+    if (!selectedId) {
+      return;
+    }
 
 
-      if (option) {
+    const option =
+      options.find(
+        item =>
+          (
+            item.id ||
+            item.name
+          ) ===
+          selectedId
+      );
 
-        result.push({
-          label,
-          name:
-            option.name || "",
-          priceType:
-            option.priceType ||
-            "INR",
-          price:
-            Number(
-              option.price || 0
-            )
-        });
 
-      }
+    if (option) {
 
-    };
+      result.push({
+
+        label,
+
+        name:
+          option.name || "",
+
+        priceType:
+          option.priceType ||
+          "INR",
+
+        price:
+          Number(
+            option.price || 0
+          )
+
+      });
+
+    }
+
+  }
 
 
   addSelected(
@@ -1555,7 +1730,665 @@ function getSelectedVariantDetails(
 
 
 /* =========================================================
-   PRODUCT DETAIL
+   CHECK AVAILABLE VARIANTS
+========================================================= */
+
+function getVariantGroups(
+  product
+) {
+
+  const groups = [];
+
+
+  const colours =
+    product?.data?.colours || [];
+
+
+  const sizes =
+    product?.data?.sizes || [];
+
+
+  const customVariants =
+    product?.data?.variants || [];
+
+
+  if (
+    Array.isArray(colours) &&
+    colours.length
+  ) {
+
+    groups.push({
+
+      key: "colours",
+
+      label: "Colour",
+
+      options: colours
+
+    });
+
+  }
+
+
+  if (
+    Array.isArray(sizes) &&
+    sizes.length
+  ) {
+
+    groups.push({
+
+      key: "sizes",
+
+      label: "Size",
+
+      options: sizes
+
+    });
+
+  }
+
+
+  customVariants
+    .forEach(
+      (
+        variant,
+        index
+      ) => {
+
+        if (
+          Array.isArray(
+            variant.options
+          ) &&
+          variant.options.length
+        ) {
+
+          groups.push({
+
+            key:
+              `custom_${index}`,
+
+            label:
+              variant.name ||
+              `Option ${index + 1}`,
+
+            options:
+              variant.options
+
+          });
+
+        }
+
+      }
+    );
+
+
+  return groups;
+
+}
+
+
+/* =========================================================
+   START ORDER PROCESS
+========================================================= */
+
+function startOrderProcess(
+  productOrId
+) {
+
+  const product =
+    typeof productOrId ===
+    "object"
+
+      ? productOrId
+
+      : state.products.find(
+          item =>
+            item.id ===
+            productOrId
+        );
+
+
+  if (!product) {
+    return;
+  }
+
+
+  state.orderProduct =
+    product;
+
+
+  /*
+    If product has variants,
+    customer MUST select them first.
+  */
+
+  const groups =
+    getVariantGroups(
+      product
+    );
+
+
+  if (
+    groups.length
+  ) {
+
+    openVariantSelectionPopup(
+      product
+    );
+
+    return;
+
+  }
+
+
+  /*
+    No variants:
+    directly show customer form.
+  */
+
+  openOrderModal(
+    product
+  );
+
+}
+
+
+/* =========================================================
+   VARIANT SELECTION POPUP
+========================================================= */
+
+function openVariantSelectionPopup(
+  product
+) {
+
+  let popup =
+    $("#variantSelectionModal");
+
+
+  /*
+    Create popup dynamically.
+    No HTML change required.
+  */
+
+  if (!popup) {
+
+    popup =
+      document.createElement(
+        "div"
+      );
+
+    popup.id =
+      "variantSelectionModal";
+
+    popup.className =
+      "modal-overlay";
+
+
+    document.body.appendChild(
+      popup
+    );
+
+  }
+
+
+  const groups =
+    getVariantGroups(
+      product
+    );
+
+
+  const selected =
+    state.selectedVariants[
+      product.id
+    ] || {};
+
+
+  const image =
+    getImages(
+      product
+    )[0]?.url ||
+    product.imageUrl ||
+    "";
+
+
+  popup.innerHTML = `
+
+    <div
+      class="order-modal variant-selection-modal"
+    >
+
+      <div class="modal-header">
+
+        <div>
+
+          <h2>
+            Select Options
+          </h2>
+
+          <p>
+            ${escapeHtml(
+              product.name || ""
+            )}
+          </p>
+
+        </div>
+
+
+        <button
+          type="button"
+          id="closeVariantPopup"
+          class="close-btn"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      ${
+        image
+          ? `
+            <div
+              style="
+                display:flex;
+                align-items:center;
+                gap:10px;
+                padding:10px;
+                margin-bottom:15px;
+                border:1px solid #27272a;
+                border-radius:10px;
+                background:#0f0f11;
+              "
+            >
+
+              <img
+                src="${escapeAttr(
+                  image
+                )}"
+                alt=""
+                style="
+                  width:55px;
+                  height:55px;
+                  object-fit:cover;
+                  border-radius:8px;
+                "
+              >
+
+              <div>
+
+                <strong
+                  style="
+                    display:block;
+                    font-size:13px;
+                  "
+                >
+                  ${escapeHtml(
+                    product.name || ""
+                  )}
+                </strong>
+
+                <span
+                  id="variantPopupPrice"
+                  style="
+                    display:block;
+                    margin-top:4px;
+                    color:#c084fc;
+                    font-size:13px;
+                    font-weight:800;
+                  "
+                >
+                  ₹${formatMoney(
+                    calculateProductPrice(
+                      product
+                    )
+                  )}
+                </span>
+
+              </div>
+
+            </div>
+          `
+          : ""
+      }
+
+
+      <div>
+
+        ${groups
+          .map(
+            group => `
+
+              <div
+                class="variant-group"
+                style="
+                  margin-bottom:18px;
+                "
+              >
+
+                <span
+                  class="variant-label"
+                  style="
+                    display:block;
+                    margin-bottom:8px;
+                  "
+                >
+                  ${escapeHtml(
+                    group.label
+                  )}
+                </span>
+
+
+                <div
+                  class="variant-options"
+                  style="
+                    display:flex;
+                    gap:8px;
+                    overflow-x:auto;
+                    padding-bottom:4px;
+                  "
+                >
+
+                  ${group.options
+                    .map(
+                      option => {
+
+                        const optionId =
+                          option.id ||
+                          option.name;
+
+
+                        const isSelected =
+                          selected[
+                            group.key
+                          ] ===
+                          optionId;
+
+
+                        return `
+
+                          <button
+                            type="button"
+                            class="
+                              variant-option
+                              order-variant-option
+                              ${
+                                isSelected
+                                  ? "selected"
+                                  : ""
+                              }
+                            "
+                            data-product-id="${escapeAttr(
+                              product.id
+                            )}"
+                            data-variant-group="${escapeAttr(
+                              group.key
+                            )}"
+                            data-option-id="${escapeAttr(
+                              optionId
+                            )}"
+                          >
+
+                            ${escapeHtml(
+                              option.name ||
+                              "Option"
+                            )}
+
+                            ${
+                              Number(
+                                option.price ||
+                                0
+                              ) !== 0
+                                ? `
+                                  <span>
+                                    ${
+                                      option.priceType ===
+                                      "%"
+                                        ? ` +${option.price}%`
+                                        : ` +₹${formatMoney(
+                                            option.price
+                                          )}`
+                                    }
+                                  </span>
+                                `
+                                : ""
+                            }
+
+                          </button>
+
+                        `;
+
+                      }
+                    )
+                    .join("")}
+
+                </div>
+
+              </div>
+
+            `
+          )
+          .join("")}
+
+      </div>
+
+
+      <div
+        id="variantSelectionMessage"
+        style="
+          min-height:18px;
+          margin-bottom:8px;
+          color:#fca5a5;
+          font-size:12px;
+        "
+      ></div>
+
+
+      <button
+        type="button"
+        id="continueVariantOrderBtn"
+        class="submit-order-btn"
+      >
+        Continue to Order
+      </button>
+
+    </div>
+
+  `;
+
+
+  popup.classList.remove(
+    "hidden"
+  );
+
+}
+
+
+/* =========================================================
+   VARIANT POPUP SELECTION
+========================================================= */
+
+function handleOrderVariantSelection(
+  button
+) {
+
+  const productId =
+    button.dataset.productId;
+
+  const group =
+    button.dataset.variantGroup;
+
+  const optionId =
+    button.dataset.optionId;
+
+
+  if (
+    !state.selectedVariants[
+      productId
+    ]
+  ) {
+
+    state.selectedVariants[
+      productId
+    ] = {};
+
+  }
+
+
+  state.selectedVariants[
+    productId
+  ][group] =
+    optionId;
+
+
+  /*
+    Change selected state ONLY.
+    Do not recreate popup.
+  */
+
+  const popup =
+    $("#variantSelectionModal");
+
+
+  if (popup) {
+
+    popup
+      .querySelectorAll(
+        `.order-variant-option[data-variant-group="${CSS.escape(
+          group
+        )}"]`
+      )
+      .forEach(
+        item => {
+
+          item.classList.toggle(
+            "selected",
+            item === button
+          );
+
+        }
+      );
+
+  }
+
+
+  const product =
+    state.products.find(
+      item =>
+        item.id ===
+        productId
+    );
+
+
+  if (product) {
+
+    const priceElement =
+      $("#variantPopupPrice");
+
+
+    if (priceElement) {
+
+      priceElement.textContent =
+        `₹${formatMoney(
+          calculateProductPrice(
+            product
+          )
+        )}`;
+
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   CONTINUE ORDER AFTER VARIANTS
+========================================================= */
+
+function continueOrderAfterVariantSelection() {
+
+  const product =
+    state.orderProduct;
+
+
+  if (!product) {
+    return;
+  }
+
+
+  const groups =
+    getVariantGroups(
+      product
+    );
+
+
+  const selected =
+    state.selectedVariants[
+      product.id
+    ] || {};
+
+
+  const missing =
+    groups.find(
+      group =>
+        !selected[
+          group.key
+        ]
+    );
+
+
+  if (missing) {
+
+    const message =
+      $("#variantSelectionMessage");
+
+
+    if (message) {
+
+      message.textContent =
+        `Please select ${missing.label}.`;
+
+    }
+
+
+    return;
+
+  }
+
+
+  closeVariantPopup();
+
+
+  openOrderModal(
+    product
+  );
+
+}
+
+
+/* =========================================================
+   CLOSE VARIANT POPUP
+========================================================= */
+
+function closeVariantPopup() {
+
+  const popup =
+    $("#variantSelectionModal");
+
+
+  if (popup) {
+
+    popup.classList.add(
+      "hidden"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SINGLE PRODUCT VIEW
 ========================================================= */
 
 function openProductDetail(
@@ -1583,9 +2416,9 @@ function openProductDetail(
     );
 
 
-  if (!images.length) {
-    imageIndex = 0;
-  } else {
+  if (
+    images.length
+  ) {
 
     imageIndex =
       Math.max(
@@ -1596,6 +2429,10 @@ function openProductDetail(
         )
       );
 
+  } else {
+
+    imageIndex = 0;
+
   }
 
 
@@ -1605,23 +2442,85 @@ function openProductDetail(
   state.selectedImageIndex =
     imageIndex;
 
+  state.productViewOpen =
+    true;
 
-  const detail =
+
+  /*
+    Hide category filters.
+  */
+
+  const categorySection =
     document.querySelector(
-      `#detail-${CSS.escape(
-        productId
-      )}`
+      ".category-filter-section"
     );
 
 
-  if (!detail) {
+  if (categorySection) {
+
+    categorySection.classList.add(
+      "hidden"
+    );
+
+  }
+
+
+  /*
+    Render ONLY this product.
+  */
+
+  const container =
+    $("#productsContainer");
+
+
+  if (!container) {
     return;
   }
 
 
-  detail.classList.remove(
-    "hidden"
+  container.innerHTML =
+    renderSingleProductPage(
+      product,
+      imageIndex
+    );
+
+
+  updateStickyOrder(
+    product
   );
+
+
+  if (updateUrl) {
+
+    updateProductUrl(
+      product.id,
+      imageIndex
+    );
+
+  }
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+}
+
+
+/* =========================================================
+   SINGLE PRODUCT PAGE HTML
+========================================================= */
+
+function renderSingleProductPage(
+  product,
+  imageIndex
+) {
+
+  const images =
+    getImages(
+      product
+    );
 
 
   const selectedImage =
@@ -1652,251 +2551,412 @@ function openProductDetail(
     );
 
 
-  detail.innerHTML = `
+  return `
 
-    ${
-      selectedImage
-        ? `
-          <img
-            class="detail-large-image"
-            src="${escapeAttr(
-              selectedImage
-            )}"
-            alt="${escapeAttr(
-              product.name || ""
-            )}"
-          >
-        `
-        : ""
-    }
-
-
-    ${
-      images.length > 1
-        ? `
-          <div class="detail-thumbnails">
-
-            ${images
-              .map(
-                (
-                  image,
-                  index
-                ) => `
-
-                  <button
-                    type="button"
-                    class="detail-thumb ${
-                      index ===
-                      imageIndex
-                        ? "active"
-                        : ""
-                    }"
-                    data-product-id="${escapeAttr(
-                      product.id
-                    )}"
-                    data-image-index="${index}"
-                  >
-
-                    <img
-                      src="${escapeAttr(
-                        image.url
-                      )}"
-                      alt=""
-                    >
-
-                  </button>
-
-                `
-              )
-              .join("")}
-
-          </div>
-        `
-        : ""
-    }
-
-
-    <div class="detail-info">
-
-      <h2>
-        ${escapeHtml(
-          product.name || ""
-        )}
-      </h2>
-
+    <article
+      class="product-card single-product-card"
+      data-product-card="${escapeAttr(
+        product.id
+      )}"
+    >
 
       ${
-        product.description
+        selectedImage
           ? `
-            <p class="detail-description">
-              ${escapeHtml(
-                product.description
-              )}
-            </p>
-          `
-          : ""
-      }
+            <div
+              style="
+                padding:10px;
+              "
+            >
 
+              <img
+                class="detail-large-image"
+                src="${escapeAttr(
+                  selectedImage
+                )}"
+                alt="${escapeAttr(
+                  product.name || ""
+                )}"
+              >
 
-      <div class="detail-price">
-        ₹${formatMoney(
-          price
-        )}
-      </div>
-
-
-      ${
-        variants
-          ? `
-            <div class="variant-area">
-              ${variants}
             </div>
           `
           : ""
       }
 
-    </div>
 
+      ${
+        images.length > 1
+          ? `
+            <div
+              class="detail-thumbnails"
+              style="
+                padding:
+                  0 10px 10px;
+              "
+            >
 
-    ${
-      otherProducts.length
-        ? `
-          <div class="other-products-title">
-            Other Products
-          </div>
+              ${images
+                .map(
+                  (
+                    image,
+                    index
+                  ) => `
 
-          <div class="other-products">
-
-            ${otherProducts
-              .map(
-                other => {
-
-                  const image =
-                    getImages(
-                      other
-                    )[0]?.url ||
-                    other.imageUrl ||
-                    "";
-
-
-                  return `
-
-                    <div
-                      class="other-product"
+                    <button
+                      type="button"
+                      class="detail-thumb ${
+                        index ===
+                        imageIndex
+                          ? "active"
+                          : ""
+                      }"
                       data-product-id="${escapeAttr(
-                        other.id
+                        product.id
                       )}"
+                      data-image-index="${index}"
                     >
 
-                      ${
-                        image
-                          ? `
-                            <img
-                              src="${escapeAttr(
-                                image
-                              )}"
-                              alt="${escapeAttr(
-                                other.name || ""
-                              )}"
-                              loading="lazy"
-                            >
-                          `
-                          : `
-                            <div
-                              style="
-                                height:110px;
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                              "
-                            >
-                              📦
-                            </div>
-                          `
-                      }
+                      <img
+                        src="${escapeAttr(
+                          image.url
+                        )}"
+                        alt=""
+                      >
+
+                    </button>
+
+                  `
+                )
+                .join("")}
+
+            </div>
+          `
+          : ""
+      }
 
 
-                      <div class="other-product-info">
+      <div
+        class="detail-info"
+        style="
+          padding:
+            8px 15px 20px;
+        "
+      >
 
-                        <span class="other-product-name">
-                          ${escapeHtml(
-                            other.name || ""
-                          )}
-                        </span>
+        <div
+          style="
+            display:flex;
+            align-items:flex-start;
+            justify-content:space-between;
+            gap:12px;
+          "
+        >
 
-                        <div class="other-product-price">
-                          ₹${formatMoney(
-                            Number(
-                              other.price || 0
-                            )
-                          )}
-                        </div>
+          <div>
 
-                      </div>
+            <h2>
+              ${escapeHtml(
+                product.name || ""
+              )}
+            </h2>
 
-                    </div>
 
-                  `;
+            ${
+              product.description
+                ? `
+                  <p class="detail-description">
+                    ${escapeHtml(
+                      product.description
+                    )}
+                  </p>
+                `
+                : ""
+            }
 
-                }
-              )
-              .join("")}
+
+            <div
+              class="detail-price"
+              id="detailPrice-${escapeAttr(
+                product.id
+              )}"
+            >
+              ₹${formatMoney(
+                price
+              )}
+            </div>
 
           </div>
-        `
-        : ""
-    }
+
+
+          <button
+            type="button"
+            class="product-order-btn"
+            data-product-id="${escapeAttr(
+              product.id
+            )}"
+          >
+            Order
+          </button>
+
+        </div>
+
+
+        ${
+          variants
+            ? `
+              <div
+                class="variant-area"
+                style="
+                  padding:
+                    0;
+                  margin-top:10px;
+                "
+              >
+                ${variants}
+              </div>
+            `
+            : ""
+        }
+
+      </div>
+
+
+      ${
+        otherProducts.length
+          ? `
+
+            <div
+              style="
+                padding:
+                  0 15px 20px;
+              "
+            >
+
+              <div class="other-products-title">
+                Other Products
+              </div>
+
+
+              <div class="other-products">
+
+                ${otherProducts
+                  .map(
+                    other => {
+
+                      const image =
+                        getImages(
+                          other
+                        )[0]?.url ||
+                        other.imageUrl ||
+                        "";
+
+
+                      return `
+
+                        <div
+                          class="other-product"
+                          data-product-id="${escapeAttr(
+                            other.id
+                          )}"
+                        >
+
+                          ${
+                            image
+                              ? `
+                                <img
+                                  src="${escapeAttr(
+                                    image
+                                  )}"
+                                  alt="${escapeAttr(
+                                    other.name || ""
+                                  )}"
+                                  loading="lazy"
+                                >
+                              `
+                              : `
+                                <div
+                                  style="
+                                    height:110px;
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                  "
+                                >
+                                  📦
+                                </div>
+                              `
+                          }
+
+
+                          <div class="other-product-info">
+
+                            <span class="other-product-name">
+                              ${escapeHtml(
+                                other.name || ""
+                              )}
+                            </span>
+
+
+                            <div class="other-product-price">
+                              ₹${formatMoney(
+                                other.price
+                              )}
+                            </div>
+
+                          </div>
+
+                        </div>
+
+                      `;
+
+                    }
+                  )
+                  .join("")}
+
+              </div>
+
+            </div>
+
+          `
+          : ""
+      }
+
+    </article>
 
   `;
 
-
-  /*
-    Scroll to the selected product.
-  */
-
-  requestAnimationFrame(
-    () => {
-
-      const card =
-        document.querySelector(
-          `[data-product-card="${CSS.escape(
-            productId
-          )}"]`
-        );
+}
 
 
-      if (card) {
+/* =========================================================
+   UPDATE DETAIL PRICE
+========================================================= */
 
-        card.scrollIntoView({
-          behavior: "smooth",
-          block: "start"
-        });
+function updateDetailPrice(
+  productId
+) {
 
-      }
+  const product =
+    state.products.find(
+      item =>
+        item.id ===
+        productId
+    );
 
-    }
-  );
+
+  if (!product) {
+    return;
+  }
+
+
+  const element =
+    document.querySelector(
+      `#detailPrice-${CSS.escape(
+        productId
+      )}`
+    );
+
+
+  if (element) {
+
+    element.textContent =
+      `₹${formatMoney(
+        calculateProductPrice(
+          product
+        )
+      )}`;
+
+  }
 
 
   updateStickyOrder(
     product
   );
 
+}
 
-  if (updateUrl) {
 
-    updateProductUrl(
-      product.id,
-      imageIndex
+/* =========================================================
+   CLOSE SINGLE PRODUCT VIEW
+========================================================= */
+
+function closeSingleProductView() {
+
+  if (
+    !state.productViewOpen
+  ) {
+
+    return;
+
+  }
+
+
+  state.productViewOpen =
+    false;
+
+  state.selectedProduct =
+    null;
+
+  state.selectedImageIndex =
+    0;
+
+
+  const categorySection =
+    document.querySelector(
+      ".category-filter-section"
+    );
+
+
+  if (categorySection) {
+
+    categorySection.classList.remove(
+      "hidden"
     );
 
   }
+
+
+  const container =
+    $("#productsContainer");
+
+
+  if (container) {
+
+    renderProducts();
+
+  }
+
+
+  const url =
+    new URL(
+      window.location.href
+    );
+
+
+  url.searchParams.delete(
+    "product"
+  );
+
+  url.searchParams.delete(
+    "image"
+  );
+
+
+  window.history.replaceState(
+    {},
+    "",
+    url
+  );
+
+
+  hideStickyOrder();
 
 }
 
 
 /* =========================================================
-   URL / DEEP LINK
+   UPDATE URL
 ========================================================= */
 
 function updateProductUrl(
@@ -1933,6 +2993,10 @@ function updateProductUrl(
 }
 
 
+/* =========================================================
+   DEEP LINK
+========================================================= */
+
 function handleDeepLink() {
 
   const params =
@@ -1948,6 +3012,8 @@ function handleDeepLink() {
 
 
   if (!productId) {
+
+    closeSingleProductView();
 
     return;
 
@@ -1971,46 +3037,16 @@ function handleDeepLink() {
 
 
   if (!product) {
+
     return;
-  }
-
-
-  const categoryId =
-    getProductCategoryId(
-      product
-    );
-
-
-  if (
-    categoryId &&
-    state.categories.some(
-      category =>
-        category.id ===
-        categoryId
-    )
-  ) {
-
-    state.selectedCategory =
-      categoryId;
-
-    renderCategoryPills();
-
-    renderProducts();
 
   }
 
 
-  setTimeout(
-    () => {
-
-      openProductDetail(
-        productId,
-        imageIndex,
-        false
-      );
-
-    },
-    100
+  openProductDetail(
+    productId,
+    imageIndex,
+    false
   );
 
 }
@@ -2037,12 +3073,6 @@ function updateStickyOrder(
     product;
 
 
-  const price =
-    calculateProductPrice(
-      product
-    );
-
-
   $("#stickyProductName")
     .textContent =
       product.name ||
@@ -2052,7 +3082,9 @@ function updateStickyOrder(
   $("#stickyProductPrice")
     .textContent =
       `₹${formatMoney(
-        price
+        calculateProductPrice(
+          product
+        )
       )}`;
 
 
@@ -2063,61 +3095,29 @@ function updateStickyOrder(
 }
 
 
-/* =========================================================
-   ORDER FOR PRODUCT
-========================================================= */
+function hideStickyOrder() {
 
-function openOrderForProduct(
-  productId
-) {
-
-  const product =
-    state.products.find(
-      item =>
-        item.id ===
-        productId
-    );
+  const bar =
+    $("#stickyOrderBar");
 
 
-  if (!product) {
-    return;
-  }
+  if (bar) {
 
-
-  /*
-    If product isn't already selected,
-    select its first image.
-  */
-
-  if (
-    !state.selectedProduct ||
-    state.selectedProduct.id !==
-      product.id
-  ) {
-
-    state.selectedProduct =
-      product;
-
-    state.selectedImageIndex =
-      0;
-
-    updateProductUrl(
-      product.id,
-      0
+    bar.classList.add(
+      "hidden"
     );
 
   }
 
 
-  openOrderModal(
-    product
-  );
+  state.orderProduct =
+    null;
 
 }
 
 
 /* =========================================================
-   OPEN ORDER MODAL
+   ORDER MODAL
 ========================================================= */
 
 function openOrderModal(
@@ -2163,7 +3163,7 @@ function openOrderModal(
               `${item.label}: ${item.name}`
           )
           .join(" • ")
-      : "No variants selected";
+      : "No variants";
 
 
   $("#orderSummary")
@@ -2183,6 +3183,7 @@ function openOrderModal(
           : ""
       }
 
+
       <div class="order-summary-info">
 
         <strong>
@@ -2191,11 +3192,13 @@ function openOrderModal(
           )}
         </strong>
 
+
         <small>
           ${escapeHtml(
             variantText
           )}
         </small>
+
 
         <div class="order-summary-price">
           ₹${formatMoney(
@@ -2255,9 +3258,7 @@ async function submitOrder(
 
 
   if (!product) {
-
     return;
-
   }
 
 
@@ -2321,11 +3322,52 @@ async function submitOrder(
   }
 
 
+  /*
+    Extra safety:
+    make sure all variants are selected
+    before submitting.
+  */
+
+  const groups =
+    getVariantGroups(
+      product
+    );
+
+
+  const selected =
+    state.selectedVariants[
+      product.id
+    ] || {};
+
+
+  const missing =
+    groups.find(
+      group =>
+        !selected[
+          group.key
+        ]
+    );
+
+
+  if (missing) {
+
+    closeOrderModal();
+
+    openVariantSelectionPopup(
+      product
+    );
+
+    return;
+
+  }
+
+
   submit.disabled =
     true;
 
   submit.textContent =
     "Creating Order...";
+
 
   message.textContent =
     "";
@@ -2377,11 +3419,6 @@ async function submitOrder(
       );
 
 
-    /*
-      Create the exact product link
-      customer clicked.
-    */
-
     const productLink =
       new URL(
         window.location.href
@@ -2402,16 +3439,9 @@ async function submitOrder(
     );
 
 
-    /*
-      Remove unrelated hash.
-    */
+    productLink.hash =
+      "";
 
-    productLink.hash = "";
-
-
-    /*
-      Send order to Worker.
-    */
 
     const response =
       await fetch(
@@ -2503,10 +3533,6 @@ async function submitOrder(
       `IG-${Date.now()}`;
 
 
-    /*
-      Build WhatsApp message.
-    */
-
     const whatsappMessage =
       buildWhatsAppMessage({
 
@@ -2544,10 +3570,6 @@ async function submitOrder(
     closeOrderModal();
 
 
-    /*
-      Open WhatsApp.
-    */
-
     window.location.href =
       whatsappUrl;
 
@@ -2562,7 +3584,6 @@ async function submitOrder(
 
     message.textContent =
       error.message;
-
 
   } finally {
 
@@ -2651,7 +3672,7 @@ ${data.clickedImage}
 
 ━━━━━━━━━━━━━━━━━━
 
-🔗 *CUSTOMER PRODUCT LINK*
+🔗 *PRODUCT LINK*
 
 ${data.productLink}
 
@@ -2659,66 +3680,5 @@ ${data.productLink}
 
 Please confirm the order.
 `.trim();
-
-}
-
-
-/* =========================================================
-   UPDATE PRICE DISPLAY
-========================================================= */
-
-function updatePriceDisplays(
-  productId
-) {
-
-  const product =
-    state.products.find(
-      item =>
-        item.id ===
-        productId
-    );
-
-
-  if (!product) {
-    return;
-  }
-
-
-  const price =
-    calculateProductPrice(
-      product
-    );
-
-
-  document
-    .querySelectorAll(
-      `[data-product-price="${CSS.escape(
-        productId
-      )}"]`
-    )
-    .forEach(
-      element => {
-
-        element.textContent =
-          `₹${formatMoney(
-            price
-          )}`;
-
-      }
-    );
-
-
-  if (
-    state.orderProduct?.id ===
-    productId
-  ) {
-
-    $("#stickyProductPrice")
-      .textContent =
-        `₹${formatMoney(
-          price
-        )}`;
-
-  }
 
 }
