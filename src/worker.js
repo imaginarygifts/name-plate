@@ -976,7 +976,7 @@ async function api(
 
 
     if (
-      !env.ADMIN_REGISTER_KEY
+      !env.SETUP_KEY
     ) {
 
       return json(
@@ -992,7 +992,7 @@ async function api(
 
     if (
       registrationKey !==
-      env.ADMIN_REGISTER_KEY
+      env.SETUP_KEY
     ) {
 
       return json(
