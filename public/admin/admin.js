@@ -3329,8 +3329,7 @@ function renderCategoriesList() {
   state.categories
     .forEach(
       (
-        category,
-        index
+        category
       ) => {
 
         const row =
@@ -3353,6 +3352,8 @@ function renderCategoriesList() {
 
         row.innerHTML = `
 
+          <!-- DRAG HANDLE -->
+
           <div
             class="category-drag"
             title="Drag to reorder"
@@ -3360,25 +3361,27 @@ function renderCategoriesList() {
             ☰
           </div>
 
-          <div class="category-position">
-            ${index + 1}
+
+          <!-- CATEGORY DETAILS -->
+
+          <div class="category-info">
+
+            <div class="category-name">
+              ${escapeHtml(
+                category.name
+              )}
+            </div>
+
+            <div class="category-slug">
+              ${escapeHtml(
+                category.slug
+              )}
+            </div>
+
           </div>
 
-          <div class="category-name">
-            ${escapeHtml(
-              category.name
-            )}
-          </div>
 
-          <div class="category-slug">
-            ${escapeHtml(
-              category.slug
-            )}
-          </div>
-
-          <div class="category-active">
-            ● Active
-          </div>
+          <!-- DELETE -->
 
           <button
             type="button"
@@ -3393,7 +3396,9 @@ function renderCategoriesList() {
         `;
 
 
-        /* Drag start */
+        /* =================================================
+           DRAG START
+        ================================================= */
 
         row.addEventListener(
           "dragstart",
@@ -3421,7 +3426,9 @@ function renderCategoriesList() {
         );
 
 
-        /* Drag end */
+        /* =================================================
+           DRAG END
+        ================================================= */
 
         row.addEventListener(
           "dragend",
@@ -3451,13 +3458,16 @@ function renderCategoriesList() {
         );
 
 
-        /* Drag over */
+        /* =================================================
+           DRAG OVER
+        ================================================= */
 
         row.addEventListener(
           "dragover",
           event => {
 
             event.preventDefault();
+
 
             event.dataTransfer.dropEffect =
               "move";
@@ -3479,6 +3489,10 @@ function renderCategoriesList() {
         );
 
 
+        /* =================================================
+           DRAG LEAVE
+        ================================================= */
+
         row.addEventListener(
           "dragleave",
           () => {
@@ -3491,7 +3505,9 @@ function renderCategoriesList() {
         );
 
 
-        /* Drop */
+        /* =================================================
+           DROP
+        ================================================= */
 
         row.addEventListener(
           "drop",
@@ -3532,7 +3548,9 @@ function renderCategoriesList() {
         );
 
 
-        /* Delete */
+        /* =================================================
+           DELETE
+        ================================================= */
 
         row
           .querySelector(
