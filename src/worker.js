@@ -23,7 +23,7 @@ const id = () => crypto.randomUUID();
 
 
 /* =========================================================
-   BASE64 HELPERS
+   BASE64
 ========================================================= */
 
 function b64(bytes) {
@@ -49,6 +49,7 @@ function b64(bytes) {
 
 
 function unb64(s) {
+
   s = s
     .replace(/-/g, "+")
     .replace(/_/g, "/");
@@ -67,10 +68,11 @@ function unb64(s) {
 
 
 /* =========================================================
-   HASHING
+   PASSWORD HASHING
 ========================================================= */
 
 async function sha256(value) {
+
   const data =
     typeof value === "string"
       ? new TextEncoder().encode(value)
@@ -89,6 +91,7 @@ async function derivePassword(
   password,
   saltB64
 ) {
+
   const salt =
     unb64(saltB64);
 
@@ -118,16 +121,20 @@ async function derivePassword(
 
 
 async function hashPassword(password) {
+
   const salt =
     new Uint8Array(16);
 
-  crypto.getRandomValues(salt);
+  crypto.getRandomValues(
+    salt
+  );
 
   const saltB64 =
     b64(salt);
 
   return {
     salt: saltB64,
+
     hash:
       await derivePassword(
         password,
@@ -145,18 +152,26 @@ function parseJSON(
   value,
   fallback
 ) {
+
   try {
+
     return JSON.parse(
       value ?? ""
     );
+
   } catch {
+
     return fallback;
+
   }
+
 }
 
 
 function cleanProduct(row) {
+
   return {
+
     id: row.id,
 
     name: row.name,
@@ -181,14 +196,144 @@ function cleanProduct(row) {
         row.data_json,
         {}
       )
+
   };
+
 }
 
 
-function mediaUrl(objectKey) {
+/* =========================================================
+   MEDIA HELPERS
+========================================================= */
+
+function mediaUrl(
+  objectKey
+) {
+
   return `/media/${encodeURIComponent(
     objectKey
   )}`;
+
+}
+
+
+/*
+  Supports old image format:
+
+  "/media/products/123/a.jpg"
+
+  and new format:
+
+  {
+    url: "/media/products/123/a.jpg",
+    key: "products/123/a.jpg"
+  }
+*/
+
+function imageObjectKey(image) {
+
+  if (!image) {
+    return "";
+  }
+
+
+  if (
+    typeof image === "string"
+  ) {
+
+    if (
+      !image.startsWith(
+        "/media/"
+      )
+    ) {
+
+      return "";
+
+    }
+
+
+    try {
+
+      return decodeURIComponent(
+        image.slice(
+          "/media/".length
+        )
+      );
+
+    } catch {
+
+      return "";
+
+    }
+
+  }
+
+
+  if (
+    typeof image === "object"
+  ) {
+
+    if (
+      image.key ||
+      image.objectKey
+    ) {
+
+      return String(
+        image.key ||
+        image.objectKey ||
+        ""
+      );
+
+    }
+
+
+    return imageObjectKey(
+      image.url ||
+      image.imageUrl ||
+      ""
+    );
+
+  }
+
+
+  return "";
+
+}
+
+
+function imageUrlFromEntry(
+  image
+) {
+
+  if (!image) {
+    return "";
+  }
+
+
+  if (
+    typeof image === "string"
+  ) {
+
+    return image;
+
+  }
+
+
+  if (
+    typeof image === "object"
+  ) {
+
+    return String(
+      image.url ||
+      image.imageUrl ||
+      ""
+    );
+
+  }
+
+
+  return "";
+
 }
 
 
@@ -200,27 +345,33 @@ async function adminFromRequest(
   request,
   env
 ) {
+
   const cookie =
     request.headers.get(
       "cookie"
     ) || "";
+
 
   const match =
     cookie.match(
       /(?:^|;\s*)cf_admin=([^;]+)/
     );
 
+
   if (!match) {
     return null;
   }
+
 
   const token =
     decodeURIComponent(
       match[1]
     );
 
+
   const tokenHash =
     await sha256(token);
+
 
   const row =
     await env.DB.prepare(`
@@ -240,7 +391,9 @@ async function adminFromRequest(
       )
       .first();
 
+
   return row || null;
+
 }
 
 
@@ -252,6 +405,7 @@ async function api(
   request,
   env
 ) {
+
   const url =
     new URL(request.url);
 
@@ -267,11 +421,66 @@ async function api(
     path === "/api/health" &&
     request.method === "GET"
   ) {
+
     return json({
       ok: true,
       service: "catalogue-api",
       time: now()
     });
+
+  }
+
+
+  /* =======================================================
+     PUBLIC CATEGORIES
+  ======================================================= */
+
+  if (
+    path === "/api/categories" &&
+    request.method === "GET"
+  ) {
+
+    const rows =
+      await env.DB.prepare(`
+        SELECT
+          id,
+          name,
+          slug,
+          active,
+          sort_order
+        FROM categories
+        WHERE active = 1
+        ORDER BY
+          sort_order ASC,
+          name ASC
+      `).all();
+
+
+    return json(
+      rows.results.map(
+        row => ({
+          id: row.id,
+
+          name: row.name,
+
+          slug: row.slug,
+
+          active:
+            Boolean(row.active),
+
+          sort_order:
+            Number(
+              row.sort_order || 0
+            )
+        })
+      ),
+      200,
+      {
+        "cache-control":
+          "public, max-age=30"
+      }
+    );
+
   }
 
 
@@ -283,6 +492,7 @@ async function api(
     path === "/api/products" &&
     request.method === "GET"
   ) {
+
     const rows =
       await env.DB.prepare(`
         SELECT *
@@ -290,6 +500,7 @@ async function api(
         WHERE active = 1
         ORDER BY name ASC
       `).all();
+
 
     return json(
       rows.results.map(
@@ -301,6 +512,7 @@ async function api(
           "public, max-age=30"
       }
     );
+
   }
 
 
@@ -313,10 +525,12 @@ async function api(
       /^\/api\/products\/([^/]+)$/
     );
 
+
   if (
     publicProduct &&
     request.method === "GET"
   ) {
+
     const product =
       await env.DB.prepare(`
         SELECT *
@@ -329,7 +543,9 @@ async function api(
         )
         .first();
 
+
     if (!product) {
+
       return json(
         {
           error:
@@ -337,7 +553,9 @@ async function api(
         },
         404
       );
+
     }
+
 
     return json(
       cleanProduct(product),
@@ -347,6 +565,7 @@ async function api(
           "public, max-age=30"
       }
     );
+
   }
 
 
@@ -358,6 +577,7 @@ async function api(
     path === "/api/setup" &&
     request.method === "POST"
   ) {
+
     const body =
       await request
         .json()
@@ -365,11 +585,13 @@ async function api(
           () => ({})
         );
 
+
     if (
       !env.SETUP_KEY ||
       body.setupKey !==
         env.SETUP_KEY
     ) {
+
       return json(
         {
           error:
@@ -377,14 +599,18 @@ async function api(
         },
         403
       );
+
     }
+
 
     const existing =
       await env.DB.prepare(
         "SELECT id FROM admins LIMIT 1"
       ).first();
 
+
     if (existing) {
+
       return json(
         {
           error:
@@ -392,7 +618,9 @@ async function api(
         },
         409
       );
+
     }
+
 
     const email =
       String(
@@ -401,15 +629,18 @@ async function api(
         .trim()
         .toLowerCase();
 
+
     const password =
       String(
         body.password || ""
       );
 
+
     if (
       !email ||
       password.length < 8
     ) {
+
       return json(
         {
           error:
@@ -417,15 +648,19 @@ async function api(
         },
         400
       );
+
     }
+
 
     const hp =
       await hashPassword(
         password
       );
 
+
     const adminId =
       id();
+
 
     await env.DB.prepare(`
       INSERT INTO admins
@@ -447,14 +682,17 @@ async function api(
       )
       .run();
 
+
     return json(
       {
         ok: true,
+
         message:
           "Admin created successfully."
       },
       201
     );
+
   }
 
 
@@ -466,12 +704,14 @@ async function api(
     path === "/api/login" &&
     request.method === "POST"
   ) {
+
     const body =
       await request
         .json()
         .catch(
           () => ({})
         );
+
 
     const email =
       String(
@@ -480,10 +720,12 @@ async function api(
         .trim()
         .toLowerCase();
 
+
     const password =
       String(
         body.password || ""
       );
+
 
     const admin =
       await env.DB.prepare(`
@@ -494,7 +736,9 @@ async function api(
         .bind(email)
         .first();
 
+
     if (!admin) {
+
       return json(
         {
           error:
@@ -502,7 +746,9 @@ async function api(
         },
         401
       );
+
     }
+
 
     const check =
       await derivePassword(
@@ -510,10 +756,12 @@ async function api(
         admin.salt
       );
 
+
     if (
       check !==
       admin.password_hash
     ) {
+
       return json(
         {
           error:
@@ -521,20 +769,26 @@ async function api(
         },
         401
       );
+
     }
+
 
     const tokenBytes =
       new Uint8Array(32);
+
 
     crypto.getRandomValues(
       tokenBytes
     );
 
+
     const token =
       b64(tokenBytes);
 
+
     const tokenHash =
       await sha256(token);
+
 
     const expires =
       now() +
@@ -543,6 +797,7 @@ async function api(
       60 *
       60 *
       1000;
+
 
     await env.DB.prepare(`
       INSERT INTO sessions
@@ -562,9 +817,11 @@ async function api(
       )
       .run();
 
+
     return json(
       {
         ok: true,
+
         email:
           admin.email
       },
@@ -576,6 +833,7 @@ async function api(
           )}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=604800`
       }
     );
+
   }
 
 
@@ -587,32 +845,42 @@ async function api(
     path === "/api/logout" &&
     request.method === "POST"
   ) {
+
     const cookie =
       request.headers.get(
         "cookie"
       ) || "";
+
 
     const match =
       cookie.match(
         /(?:^|;\s*)cf_admin=([^;]+)/
       );
 
+
     if (match) {
+
       const token =
         decodeURIComponent(
           match[1]
         );
 
+
       const tokenHash =
         await sha256(token);
+
 
       await env.DB.prepare(`
         DELETE FROM sessions
         WHERE token_hash = ?
       `)
-        .bind(tokenHash)
+        .bind(
+          tokenHash
+        )
         .run();
+
     }
+
 
     return json(
       {
@@ -624,6 +892,7 @@ async function api(
           "cf_admin=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
       }
     );
+
   }
 
 
@@ -635,43 +904,56 @@ async function api(
     path === "/api/me" &&
     request.method === "GET"
   ) {
+
     const admin =
       await adminFromRequest(
         request,
         env
       );
 
+
     if (!admin) {
+
       return json(
         {
           loggedIn: false
         },
         401
       );
+
     }
+
 
     return json({
       loggedIn: true,
+
       email:
         admin.email
     });
+
   }
 
 
   /* =======================================================
-     NEW USER / ADMIN REGISTRATION
+     ADMIN REGISTRATION
+     
+     Requires Cloudflare variable:
+
+     ADMIN_REGISTER_KEY
   ======================================================= */
 
   if (
     path === "/api/register" &&
     request.method === "POST"
   ) {
+
     const body =
       await request
         .json()
         .catch(
           () => ({})
         );
+
 
     const email =
       String(
@@ -680,12 +962,52 @@ async function api(
         .trim()
         .toLowerCase();
 
+
     const password =
       String(
         body.password || ""
       );
 
+
+    const registrationKey =
+      String(
+        body.registrationKey || ""
+      ).trim();
+
+
+    if (
+      !env.ADMIN_REGISTER_KEY
+    ) {
+
+      return json(
+        {
+          error:
+            "Admin registration is not configured."
+        },
+        500
+      );
+
+    }
+
+
+    if (
+      registrationKey !==
+      env.ADMIN_REGISTER_KEY
+    ) {
+
+      return json(
+        {
+          error:
+            "Invalid admin registration key."
+        },
+        403
+      );
+
+    }
+
+
     if (!email) {
+
       return json(
         {
           error:
@@ -693,11 +1015,14 @@ async function api(
         },
         400
       );
+
     }
+
 
     if (
       password.length < 8
     ) {
+
       return json(
         {
           error:
@@ -705,7 +1030,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     const existing =
       await env.DB.prepare(`
@@ -713,10 +1040,14 @@ async function api(
         FROM admins
         WHERE email = ?
       `)
-        .bind(email)
+        .bind(
+          email
+        )
         .first();
 
+
     if (existing) {
+
       return json(
         {
           error:
@@ -724,15 +1055,19 @@ async function api(
         },
         409
       );
+
     }
+
 
     const hp =
       await hashPassword(
         password
       );
 
+
     const adminId =
       id();
+
 
     await env.DB.prepare(`
       INSERT INTO admins
@@ -754,14 +1089,17 @@ async function api(
       )
       .run();
 
+
     return json(
       {
         ok: true,
+
         message:
           "User created successfully. Please login."
       },
       201
     );
+
   }
 
 
@@ -775,7 +1113,9 @@ async function api(
       env
     );
 
+
   if (!admin) {
+
     return json(
       {
         error:
@@ -783,6 +1123,7 @@ async function api(
       },
       401
     );
+
   }
 
 
@@ -794,6 +1135,7 @@ async function api(
     path === "/api/admin/categories" &&
     request.method === "GET"
   ) {
+
     const rows =
       await env.DB.prepare(`
         SELECT
@@ -801,30 +1143,55 @@ async function api(
           name,
           slug,
           active,
+          sort_order,
           created_at,
           updated_at
         FROM categories
         WHERE active = 1
-        ORDER BY name ASC
+        ORDER BY
+          sort_order ASC,
+          name ASC
       `).all();
 
+
     return json(
-      rows.results.map(row => ({
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        active: Boolean(row.active),
-        created_at: row.created_at,
-        updated_at: row.updated_at
-      }))
+      rows.results.map(
+        row => ({
+          id: row.id,
+
+          name: row.name,
+
+          slug: row.slug,
+
+          active:
+            Boolean(row.active),
+
+          sort_order:
+            Number(
+              row.sort_order || 0
+            ),
+
+          created_at:
+            row.created_at,
+
+          updated_at:
+            row.updated_at
+        })
+      )
     );
+
   }
 
+
+  /* =======================================================
+     CREATE CATEGORY
+  ======================================================= */
 
   if (
     path === "/api/admin/categories" &&
     request.method === "POST"
   ) {
+
     const body =
       await request
         .json()
@@ -832,12 +1199,15 @@ async function api(
           () => ({})
         );
 
+
     const name =
       String(
         body.name || ""
       ).trim();
 
+
     if (!name) {
+
       return json(
         {
           error:
@@ -845,7 +1215,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     let slug =
       String(
@@ -854,7 +1226,9 @@ async function api(
         .trim()
         .toLowerCase();
 
+
     if (!slug) {
+
       slug =
         name
           .toLowerCase()
@@ -866,9 +1240,12 @@ async function api(
             /^-+|-+$/g,
             ""
           );
+
     }
 
+
     if (!slug) {
+
       return json(
         {
           error:
@@ -876,7 +1253,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     const existing =
       await env.DB.prepare(`
@@ -893,7 +1272,9 @@ async function api(
         )
         .first();
 
+
     if (existing) {
+
       return json(
         {
           error:
@@ -901,13 +1282,37 @@ async function api(
         },
         409
       );
+
     }
+
+
+    const last =
+      await env.DB.prepare(`
+        SELECT
+          COALESCE(
+            MAX(sort_order),
+            -1
+          ) AS max_order
+        FROM categories
+        WHERE active = 1
+      `)
+      .first();
+
+
+    const sortOrder =
+      Number(
+        last?.max_order ??
+        -1
+      ) + 1;
+
 
     const categoryId =
       id();
 
+
     const timestamp =
       now();
+
 
     await env.DB.prepare(`
       INSERT INTO categories
@@ -916,25 +1321,29 @@ async function api(
         name,
         slug,
         active,
+        sort_order,
         created_at,
         updated_at
       )
-      VALUES (?, ?, ?, 1, ?, ?)
+      VALUES (?, ?, ?, 1, ?, ?, ?)
     `)
       .bind(
         categoryId,
         name,
         slug,
+        sortOrder,
         timestamp,
         timestamp
       )
       .run();
+
 
     return json(
       {
         ok: true,
 
         category: {
+
           id:
             categoryId,
 
@@ -942,17 +1351,173 @@ async function api(
 
           slug,
 
-          active: 1,
+          active: true,
+
+          sort_order:
+            sortOrder,
 
           created_at:
             timestamp,
 
           updated_at:
             timestamp
+
         }
       },
       201
     );
+
+  }
+
+
+  /* =======================================================
+     REORDER CATEGORIES
+  ======================================================= */
+
+  if (
+    path ===
+      "/api/admin/categories/reorder" &&
+    request.method === "POST"
+  ) {
+
+    const body =
+      await request
+        .json()
+        .catch(
+          () => ({})
+        );
+
+
+    const categories =
+      Array.isArray(
+        body.categories
+      )
+        ? body.categories
+        : [];
+
+
+    if (
+      !categories.length
+    ) {
+
+      return json(
+        {
+          error:
+            "Category order is required."
+        },
+        400
+      );
+
+    }
+
+
+    const timestamp =
+      now();
+
+
+    const statements =
+      categories.map(
+        (
+          category,
+          index
+        ) =>
+
+          env.DB.prepare(`
+            UPDATE categories
+            SET
+              sort_order = ?,
+              updated_at = ?
+            WHERE
+              id = ?
+              AND active = 1
+          `)
+            .bind(
+              index,
+              timestamp,
+              String(
+                category.id ||
+                ""
+              )
+            )
+
+      );
+
+
+    await env.DB.batch(
+      statements
+    );
+
+
+    return json({
+      ok: true
+    });
+
+  }
+
+
+  /* =======================================================
+     DELETE CATEGORY
+  ======================================================= */
+
+  const categoryRoute =
+    path.match(
+      /^\/api\/admin\/categories\/([^/]+)$/
+    );
+
+
+  if (
+    categoryRoute &&
+    request.method === "DELETE"
+  ) {
+
+    const categoryId =
+      decodeURIComponent(
+        categoryRoute[1]
+      );
+
+
+    const category =
+      await env.DB.prepare(`
+        SELECT
+          id,
+          name
+        FROM categories
+        WHERE id = ?
+        LIMIT 1
+      `)
+        .bind(
+          categoryId
+        )
+        .first();
+
+
+    if (!category) {
+
+      return json(
+        {
+          error:
+            "Category not found."
+        },
+        404
+      );
+
+    }
+
+
+    await env.DB.prepare(`
+      DELETE FROM categories
+      WHERE id = ?
+    `)
+      .bind(
+        categoryId
+      )
+      .run();
+
+
+    return json({
+      ok: true
+    });
+
   }
 
 
@@ -964,6 +1529,7 @@ async function api(
     path === "/api/admin/products" &&
     request.method === "GET"
   ) {
+
     const rows =
       await env.DB.prepare(`
         SELECT *
@@ -971,11 +1537,13 @@ async function api(
         ORDER BY name ASC
       `).all();
 
+
     return json(
       rows.results.map(
         cleanProduct
       )
     );
+
   }
 
 
@@ -987,6 +1555,7 @@ async function api(
     path === "/api/admin/products" &&
     request.method === "POST"
   ) {
+
     const body =
       await request
         .json()
@@ -994,18 +1563,23 @@ async function api(
           () => ({})
         );
 
+
     const productId =
       id();
 
+
     const timestamp =
       now();
+
 
     const name =
       String(
         body.name || ""
       ).trim();
 
+
     if (!name) {
+
       return json(
         {
           error:
@@ -1013,7 +1587,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     const data =
       body.data &&
@@ -1021,13 +1597,17 @@ async function api(
         ? body.data
         : {};
 
+
     if (
       !Array.isArray(
         data.images
       )
     ) {
+
       data.images = [];
+
     }
+
 
     await env.DB.prepare(`
       INSERT INTO products
@@ -1078,14 +1658,17 @@ async function api(
       )
       .run();
 
+
     return json(
       {
         ok: true,
+
         id:
           productId
       },
       201
     );
+
   }
 
 
@@ -1103,8 +1686,10 @@ async function api(
     productRoute &&
     request.method === "PUT"
   ) {
+
     const productId =
       productRoute[1];
+
 
     const oldProduct =
       await env.DB.prepare(`
@@ -1117,7 +1702,9 @@ async function api(
         )
         .first();
 
+
     if (!oldProduct) {
+
       return json(
         {
           error:
@@ -1125,7 +1712,9 @@ async function api(
         },
         404
       );
+
     }
+
 
     const body =
       await request
@@ -1134,11 +1723,13 @@ async function api(
           () => ({})
         );
 
+
     const oldData =
       parseJSON(
         oldProduct.data_json,
         {}
       );
+
 
     const newData =
       body.data &&
@@ -1146,29 +1737,46 @@ async function api(
         ? body.data
         : {};
 
+
+    /*
+      Preserve images if client
+      didn't send an images array.
+    */
+
     if (
       !Array.isArray(
         newData.images
       )
     ) {
+
       newData.images =
         Array.isArray(
           oldData.images
         )
           ? oldData.images
           : [];
+
     }
+
 
     const imageUrl =
       body.imageUrl !== undefined
+
         ? String(
-            body.imageUrl || ""
+            body.imageUrl ||
+            ""
           )
+
         : (
             oldProduct.image_url ||
-            newData.images[0] ||
+
+            imageUrlFromEntry(
+              newData.images[0]
+            ) ||
+
             ""
           );
+
 
     await env.DB.prepare(`
       UPDATE products
@@ -1184,6 +1792,7 @@ async function api(
       WHERE id = ?
     `)
       .bind(
+
         String(
           body.name ||
           oldProduct.name
@@ -1220,12 +1829,15 @@ async function api(
         now(),
 
         productId
+
       )
       .run();
+
 
     return json({
       ok: true
     });
+
   }
 
 
@@ -1237,6 +1849,7 @@ async function api(
     productRoute &&
     request.method === "DELETE"
   ) {
+
     const product =
       await env.DB.prepare(`
         SELECT *
@@ -1248,7 +1861,9 @@ async function api(
         )
         .first();
 
+
     if (!product) {
+
       return json(
         {
           error:
@@ -1256,13 +1871,16 @@ async function api(
         },
         404
       );
+
     }
+
 
     const data =
       parseJSON(
         product.data_json,
         {}
       );
+
 
     const images =
       Array.isArray(
@@ -1271,41 +1889,43 @@ async function api(
         ? data.images
         : [];
 
+
+    /*
+      Delete all product R2 images.
+    */
+
     for (
       const image of images
     ) {
-      if (
-        typeof image !== "string"
-      ) {
-        continue;
-      }
-
-      if (
-        !image.startsWith(
-          "/media/"
-        )
-      ) {
-        continue;
-      }
 
       const objectKey =
-        decodeURIComponent(
-          image.slice(
-            "/media/".length
-          )
+        imageObjectKey(
+          image
         );
 
+
+      if (!objectKey) {
+        continue;
+      }
+
+
       try {
+
         await env.MEDIA.delete(
           objectKey
         );
-      } catch (e) {
+
+      } catch (error) {
+
         console.error(
           "R2 delete failed:",
-          e
+          error
         );
+
       }
+
     }
+
 
     await env.DB.prepare(`
       DELETE FROM products
@@ -1316,9 +1936,11 @@ async function api(
       )
       .run();
 
+
     return json({
       ok: true
     });
+
   }
 
 
@@ -1331,8 +1953,10 @@ async function api(
       "/api/admin/product-images" &&
     request.method === "POST"
   ) {
+
     const form =
       await request.formData();
+
 
     const productId =
       String(
@@ -1341,15 +1965,20 @@ async function api(
         ) || ""
       );
 
+
     /*
-      Accept both "file" and "image".
+      Support both:
+      file
+      image
     */
 
     const file =
       form.get("file") ||
       form.get("image");
 
+
     if (!productId) {
+
       return json(
         {
           error:
@@ -1357,11 +1986,14 @@ async function api(
         },
         400
       );
+
     }
+
 
     if (
       !(file instanceof File)
     ) {
+
       return json(
         {
           error:
@@ -1369,7 +2001,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     const product =
       await env.DB.prepare(`
@@ -1382,7 +2016,9 @@ async function api(
         )
         .first();
 
+
     if (!product) {
+
       return json(
         {
           error:
@@ -1390,7 +2026,9 @@ async function api(
         },
         404
       );
+
     }
+
 
     const allowedTypes =
       [
@@ -1401,11 +2039,13 @@ async function api(
         "image/avif"
       ];
 
+
     if (
       !allowedTypes.includes(
         file.type
       )
     ) {
+
       return json(
         {
           error:
@@ -1413,12 +2053,15 @@ async function api(
         },
         400
       );
+
     }
+
 
     if (
       file.size >
       10 * 1024 * 1024
     ) {
+
       return json(
         {
           error:
@@ -1426,7 +2069,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     let ext =
       (
@@ -1441,35 +2086,44 @@ async function api(
         )
         .toLowerCase();
 
+
     if (!ext) {
+
       ext =
         file.type ===
         "image/jpeg"
           ? "jpg"
           : "bin";
+
     }
+
 
     const objectKey =
       `products/${productId}/${crypto.randomUUID()}.${ext}`;
+
 
     await env.MEDIA.put(
       objectKey,
       file.stream(),
       {
         httpMetadata: {
+
           contentType:
             file.type,
 
           cacheControl:
             "public, max-age=31536000, immutable"
+
         }
       }
     );
+
 
     const imageUrl =
       mediaUrl(
         objectKey
       );
+
 
     const data =
       parseJSON(
@@ -1477,21 +2131,27 @@ async function api(
         {}
       );
 
+
     if (
       !Array.isArray(
         data.images
       )
     ) {
+
       data.images = [];
+
     }
+
 
     data.images.push(
       imageUrl
     );
 
+
     const mainImage =
       product.image_url ||
       imageUrl;
+
 
     await env.DB.prepare(`
       UPDATE products
@@ -1502,6 +2162,7 @@ async function api(
       WHERE id = ?
     `)
       .bind(
+
         mainImage,
 
         JSON.stringify(
@@ -1511,8 +2172,10 @@ async function api(
         now(),
 
         productId
+
       )
       .run();
+
 
     return json(
       {
@@ -1525,6 +2188,7 @@ async function api(
       },
       201
     );
+
   }
 
 
@@ -1537,28 +2201,36 @@ async function api(
       /^\/api\/admin\/product-images\/(.+)$/
     );
 
+
   if (
     productImageDelete &&
     request.method === "DELETE"
   ) {
+
     const encodedKey =
       productImageDelete[1];
+
 
     const objectKey =
       decodeURIComponent(
         encodedKey
       );
 
+
     const productId =
       String(
         new URL(
           request.url
-        ).searchParams.get(
-          "productId"
-        ) || ""
+        )
+          .searchParams
+          .get(
+            "productId"
+          ) || ""
       );
 
+
     if (!productId) {
+
       return json(
         {
           error:
@@ -1566,7 +2238,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     const product =
       await env.DB.prepare(`
@@ -1579,7 +2253,9 @@ async function api(
         )
         .first();
 
+
     if (!product) {
+
       return json(
         {
           error:
@@ -1587,7 +2263,9 @@ async function api(
         },
         404
       );
+
     }
+
 
     const data =
       parseJSON(
@@ -1595,25 +2273,43 @@ async function api(
         {}
       );
 
+
+    /*
+      Remove matching image from
+      both old string format and
+      new object format.
+    */
+
     data.images =
       Array.isArray(
         data.images
       )
+
         ? data.images.filter(
             image =>
-              image !==
-              mediaUrl(
-                objectKey
-              )
+              imageObjectKey(
+                image
+              ) !==
+              objectKey
           )
+
         : [];
+
+
+    /*
+      Delete from R2.
+    */
 
     await env.MEDIA.delete(
       objectKey
     );
 
+
     const newMainImage =
-      data.images[0] || "";
+      imageUrlFromEntry(
+        data.images[0]
+      ) || "";
+
 
     await env.DB.prepare(`
       UPDATE products
@@ -1624,6 +2320,7 @@ async function api(
       WHERE id = ?
     `)
       .bind(
+
         newMainImage,
 
         JSON.stringify(
@@ -1633,23 +2330,27 @@ async function api(
         now(),
 
         productId
+
       )
       .run();
+
 
     return json({
       ok: true
     });
+
   }
 
 
   /* =======================================================
-     ORDERS
+     ORDERS - CREATE
   ======================================================= */
 
   if (
     path === "/api/orders" &&
     request.method === "POST"
   ) {
+
     const body =
       await request
         .json()
@@ -1657,61 +2358,74 @@ async function api(
           () => ({})
         );
 
+
     const customer =
       body.customer || {};
 
+
     const product =
       body.product || {};
+
 
     const customerName =
       String(
         customer.name || ""
       ).trim();
 
+
     const customerPhone =
       String(
         customer.phone || ""
       ).trim();
+
 
     const address =
       String(
         customer.address || ""
       ).trim();
 
+
     const pincode =
       String(
         customer.pincode || ""
       ).trim();
+
 
     const productId =
       String(
         product.id || ""
       ).trim();
 
+
     const productName =
       String(
         product.name || ""
       ).trim();
+
 
     const productImage =
       String(
         product.image || ""
       ).trim();
 
+
     const colour =
       String(
         product.colour || ""
       ).trim();
+
 
     const size =
       String(
         product.size || ""
       ).trim();
 
+
     const price =
       Number(
         product.price || 0
       );
+
 
     if (
       !customerName ||
@@ -1721,6 +2435,7 @@ async function api(
       !productId ||
       !productName
     ) {
+
       return json(
         {
           error:
@@ -1728,11 +2443,15 @@ async function api(
         },
         400
       );
+
     }
+
 
     const realProduct =
       await env.DB.prepare(`
-        SELECT id, name
+        SELECT
+          id,
+          name
         FROM products
         WHERE id = ?
           AND active = 1
@@ -1742,7 +2461,9 @@ async function api(
         )
         .first();
 
+
     if (!realProduct) {
+
       return json(
         {
           error:
@@ -1750,7 +2471,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     const orderId =
       "IG-" +
@@ -1759,11 +2482,16 @@ async function api(
         .toUpperCase() +
       "-" +
       crypto.randomUUID()
-        .slice(0, 6)
+        .slice(
+          0,
+          6
+        )
         .toUpperCase();
+
 
     const createdAt =
       now();
+
 
     await env.DB.prepare(`
       INSERT INTO orders
@@ -1785,29 +2513,46 @@ async function api(
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
       .bind(
+
         orderId,
+
         customerName,
+
         customerPhone,
+
         address,
+
         pincode,
+
         productId,
+
         productName,
+
         productImage,
+
         colour,
+
         size,
+
         price,
+
         "new",
+
         createdAt
+
       )
       .run();
+
 
     return json(
       {
         ok: true,
+
         orderId
       },
       201
     );
+
   }
 
 
@@ -1819,6 +2564,7 @@ async function api(
     path === "/api/admin/orders" &&
     request.method === "GET"
   ) {
+
     const rows =
       await env.DB.prepare(`
         SELECT *
@@ -1826,9 +2572,11 @@ async function api(
         ORDER BY created_at DESC
       `).all();
 
+
     return json(
       rows.results
     );
+
   }
 
 
@@ -1841,10 +2589,12 @@ async function api(
       /^\/api\/admin\/orders\/([^/]+)$/
     );
 
+
   if (
     orderRoute &&
     request.method === "PUT"
   ) {
+
     const body =
       await request
         .json()
@@ -1852,10 +2602,12 @@ async function api(
           () => ({})
         );
 
+
     const status =
       String(
         body.status || "new"
       );
+
 
     const allowed =
       [
@@ -1867,11 +2619,13 @@ async function api(
         "cancelled"
       ];
 
+
     if (
       !allowed.includes(
         status
       )
     ) {
+
       return json(
         {
           error:
@@ -1879,7 +2633,9 @@ async function api(
         },
         400
       );
+
     }
+
 
     await env.DB.prepare(`
       UPDATE orders
@@ -1892,41 +2648,54 @@ async function api(
       )
       .run();
 
+
     return json({
       ok: true
     });
+
   }
 
 
   /* =======================================================
      OLD CATALOGUE API
+     
+     Kept for compatibility.
   ======================================================= */
 
   if (
     path === "/api/catalogues" &&
     request.method === "GET"
   ) {
+
     const rows =
       await env.DB.prepare(`
         SELECT c.*,
+
           (
             SELECT COUNT(*)
             FROM catalogue_images i
             WHERE i.catalogue_id = c.id
           ) AS image_count
+
         FROM catalogues c
+
         WHERE c.active = 1
+
         ORDER BY
           c.display_order ASC,
           c.created_at ASC
       `).all();
 
+
     return json(
       rows.results.map(
         c => ({
-          id: c.id,
 
-          name: c.name,
+          id:
+            c.id,
+
+          name:
+            c.name,
 
           description:
             c.description,
@@ -1935,7 +2704,9 @@ async function api(
             c.display_order,
 
           active:
-            Boolean(c.active),
+            Boolean(
+              c.active
+            ),
 
           colours:
             parseJSON(
@@ -1951,9 +2722,11 @@ async function api(
 
           imageCount:
             c.image_count
+
         })
       )
     );
+
   }
 
 
@@ -1968,6 +2741,7 @@ async function api(
     },
     404
   );
+
 }
 
 
@@ -1982,19 +2756,23 @@ export default {
     env,
     ctx
   ) {
+
     const url =
       new URL(
         request.url
       );
 
 
-    /* API */
+    /* =====================================================
+       API
+    ===================================================== */
 
     if (
       url.pathname.startsWith(
         "/api/"
       )
     ) {
+
       try {
 
         return await api(
@@ -2008,6 +2786,7 @@ export default {
           error
         );
 
+
         return json(
           {
             error:
@@ -2016,17 +2795,22 @@ export default {
           },
           500
         );
+
       }
+
     }
 
 
-    /* R2 MEDIA */
+    /* =====================================================
+       R2 MEDIA
+    ===================================================== */
 
     if (
       url.pathname.startsWith(
         "/media/"
       )
     ) {
+
       const key =
         decodeURIComponent(
           url.pathname.slice(
@@ -2034,34 +2818,43 @@ export default {
           )
         );
 
+
       const object =
         await env.MEDIA.get(
           key
         );
 
+
       if (!object) {
+
         return text(
           "Not found",
           404
         );
+
       }
+
 
       const headers =
         new Headers();
 
+
       object.writeHttpMetadata(
         headers
       );
+
 
       headers.set(
         "etag",
         object.httpEtag
       );
 
+
       headers.set(
         "cache-control",
         "public, max-age=31536000, immutable"
       );
+
 
       return new Response(
         object.body,
@@ -2069,14 +2862,18 @@ export default {
           headers
         }
       );
+
     }
 
 
-    /* WEBSITE FILES */
+    /* =====================================================
+       WEBSITE FILES
+    ===================================================== */
 
     return env.ASSETS.fetch(
       request
     );
+
   }
 
 };
