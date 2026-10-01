@@ -1,5 +1,9 @@
 /* =========================================================
    IMAGINARY GIFTS ADMIN
+   Updated:
+   1. Existing image deletion on SAVE
+   2. Category delete + drag/drop ordering
+   3. Admin registration key
    Compatible with original Worker authentication/API
 ========================================================= */
 
@@ -14,7 +18,12 @@ const state = {
   selectedImages: [],
   existingImages: [],
 
-  customVariants: []
+  /* Images removed from editor and waiting for SAVE */
+  deletedImages: [],
+
+  customVariants: [],
+
+  draggedCategoryId: null
 };
 
 
@@ -33,20 +42,27 @@ async function api(url, options = {}) {
     config.body &&
     !(config.body instanceof FormData)
   ) {
+
     config.headers = {
       "content-type": "application/json",
       ...(config.headers || {})
     };
+
   }
 
-  const response = await fetch(url, config);
+  const response =
+    await fetch(url, config);
 
   let data = null;
 
   try {
+
     data = await response.json();
+
   } catch {
+
     data = null;
+
   }
 
   if (!response.ok) {
@@ -57,9 +73,11 @@ async function api(url, options = {}) {
       `Request failed (${response.status})`;
 
     throw new Error(message);
+
   }
 
   return data;
+
 }
 
 
@@ -67,13 +85,24 @@ async function api(url, options = {}) {
    INIT
 ========================================================= */
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener(
+  "DOMContentLoaded",
+  init
+);
+
 
 async function init() {
 
   bindEvents();
 
+  /*
+    Add registration-key input automatically.
+    No HTML change is required.
+  */
+  ensureRegistrationKeyField();
+
   await checkLogin();
+
 }
 
 
@@ -85,7 +114,8 @@ async function checkLogin() {
 
   try {
 
-    const data = await api("/api/me");
+    const data =
+      await api("/api/me");
 
     if (
       data &&
@@ -111,64 +141,181 @@ async function checkLogin() {
 
 function showAuth() {
 
-  $("#authScreen").classList.remove("hidden");
-  $("#adminApp").classList.add("hidden");
+  $("#authScreen")
+    .classList.remove("hidden");
+
+  $("#adminApp")
+    .classList.add("hidden");
 
 }
 
 
 function showAdmin(email = "") {
 
-  $("#authScreen").classList.add("hidden");
-  $("#adminApp").classList.remove("hidden");
+  $("#authScreen")
+    .classList.add("hidden");
 
-  $("#adminEmail").textContent = email || "";
+  $("#adminApp")
+    .classList.remove("hidden");
+
+  $("#adminEmail")
+    .textContent =
+      email || "";
 
   loadCategories();
   loadProducts();
+
 }
 
 
 /* =========================================================
-   LOGIN / REGISTER EVENTS
+   REGISTRATION KEY FIELD
+========================================================= */
+
+function ensureRegistrationKeyField() {
+
+  const form =
+    $("#registerForm");
+
+  if (!form) return;
+
+  /*
+    If the field already exists in HTML,
+    don't create another one.
+  */
+
+  if (
+    $("#registerKey")
+  ) {
+
+    return;
+
+  }
+
+  const wrapper =
+    document.createElement("div");
+
+  wrapper.className =
+    "form-group registration-key-group";
+
+  wrapper.innerHTML = `
+
+    <label
+      for="registerKey"
+    >
+      Admin Registration Key
+    </label>
+
+    <input
+      id="registerKey"
+      type="password"
+      autocomplete="off"
+      placeholder="Enter registration key"
+      required
+    >
+
+    <small
+      style="
+        display:block;
+        margin-top:6px;
+        opacity:.65;
+      "
+    >
+      Required to create a new admin account.
+    </small>
+
+  `;
+
+  /*
+    Put key field before the submit button.
+  */
+
+  const submitButton =
+    form.querySelector(
+      'button[type="submit"], input[type="submit"]'
+    );
+
+  if (submitButton) {
+
+    submitButton
+      .parentNode
+      .insertBefore(
+        wrapper,
+        submitButton
+          .closest(".form-group") ||
+        submitButton
+      );
+
+  } else {
+
+    form.appendChild(wrapper);
+
+  }
+
+}
+
+
+/* =========================================================
+   EVENTS
 ========================================================= */
 
 function bindEvents() {
 
-  $("#loginForm").addEventListener(
-    "submit",
-    handleLogin
-  );
+  /* Login */
 
-  $("#registerForm").addEventListener(
-    "submit",
-    handleRegister
-  );
+  $("#loginForm")
+    .addEventListener(
+      "submit",
+      handleLogin
+    );
 
-  $("#showRegisterBtn").addEventListener(
-    "click",
-    () => {
 
-      $("#loginBox").classList.add("hidden");
-      $("#registerBox").classList.remove("hidden");
+  /* Register */
 
-    }
-  );
+  $("#registerForm")
+    .addEventListener(
+      "submit",
+      handleRegister
+    );
 
-  $("#showLoginBtn").addEventListener(
-    "click",
-    () => {
 
-      $("#registerBox").classList.add("hidden");
-      $("#loginBox").classList.remove("hidden");
+  $("#showRegisterBtn")
+    .addEventListener(
+      "click",
+      () => {
 
-    }
-  );
+        $("#loginBox")
+          .classList.add("hidden");
 
-  $("#logoutBtn").addEventListener(
-    "click",
-    logout
-  );
+        $("#registerBox")
+          .classList.remove("hidden");
+
+        ensureRegistrationKeyField();
+
+      }
+    );
+
+
+  $("#showLoginBtn")
+    .addEventListener(
+      "click",
+      () => {
+
+        $("#registerBox")
+          .classList.add("hidden");
+
+        $("#loginBox")
+          .classList.remove("hidden");
+
+      }
+    );
+
+
+  $("#logoutBtn")
+    .addEventListener(
+      "click",
+      logout
+    );
 
 
   /* Navigation */
@@ -193,118 +340,154 @@ function bindEvents() {
 
   /* Products */
 
-  $("#newProductBtn").addEventListener(
-    "click",
-    () => openProductEditor()
-  );
+  $("#newProductBtn")
+    .addEventListener(
+      "click",
+      () => openProductEditor()
+    );
 
-  $("#closeEditorBtn").addEventListener(
-    "click",
-    closeProductEditor
-  );
 
-  $("#cancelProductBtn").addEventListener(
-    "click",
-    closeProductEditor
-  );
+  $("#closeEditorBtn")
+    .addEventListener(
+      "click",
+      closeProductEditor
+    );
 
-  $("#productForm").addEventListener(
-    "submit",
-    saveProduct
-  );
 
-  $("#addColourBtn").addEventListener(
-    "click",
-    () => addColourRow()
-  );
+  $("#cancelProductBtn")
+    .addEventListener(
+      "click",
+      closeProductEditor
+    );
 
-  $("#addSizeBtn").addEventListener(
-    "click",
-    () => addSizeRow()
-  );
 
-  $("#addVariantBtn").addEventListener(
-    "click",
-    () => addCustomVariant()
-  );
+  $("#productForm")
+    .addEventListener(
+      "submit",
+      saveProduct
+    );
 
-  $("#refreshProductsBtn").addEventListener(
-    "click",
-    loadProducts
-  );
+
+  $("#addColourBtn")
+    .addEventListener(
+      "click",
+      () => addColourRow()
+    );
+
+
+  $("#addSizeBtn")
+    .addEventListener(
+      "click",
+      () => addSizeRow()
+    );
+
+
+  $("#addVariantBtn")
+    .addEventListener(
+      "click",
+      () => addCustomVariant()
+    );
+
+
+  $("#refreshProductsBtn")
+    .addEventListener(
+      "click",
+      loadProducts
+    );
 
 
   /* Image picker */
 
-  $("#imageDropZone").addEventListener(
-    "click",
-    () => $("#productImages").click()
-  );
-
-  $("#productImages").addEventListener(
-    "change",
-    handleImageSelection
-  );
+  $("#imageDropZone")
+    .addEventListener(
+      "click",
+      () => $("#productImages").click()
+    );
 
 
-  /* Category */
-
-  $("#createCategoryBtn").addEventListener(
-    "click",
-    openCategoryModal
-  );
-
-  $("#addCategoryPageBtn").addEventListener(
-    "click",
-    openCategoryModal
-  );
-
-  $("#refreshCategoriesBtn").addEventListener(
-    "click",
-    loadCategories
-  );
-
-  $("#categoryForm").addEventListener(
-    "submit",
-    createCategory
-  );
-
-  $("#closeCategoryModalBtn").addEventListener(
-    "click",
-    closeCategoryModal
-  );
-
-  $("#cancelCategoryBtn").addEventListener(
-    "click",
-    closeCategoryModal
-  );
+  $("#productImages")
+    .addEventListener(
+      "change",
+      handleImageSelection
+    );
 
 
-  $("#categoryName").addEventListener(
-    "input",
-    () => {
+  /* Categories */
 
-      if (
-        !$("#categorySlug").dataset.edited
-      ) {
+  $("#createCategoryBtn")
+    .addEventListener(
+      "click",
+      openCategoryModal
+    );
 
-        $("#categorySlug").value =
-          slugify($("#categoryName").value);
+
+  $("#addCategoryPageBtn")
+    .addEventListener(
+      "click",
+      openCategoryModal
+    );
+
+
+  $("#refreshCategoriesBtn")
+    .addEventListener(
+      "click",
+      loadCategories
+    );
+
+
+  $("#categoryForm")
+    .addEventListener(
+      "submit",
+      createCategory
+    );
+
+
+  $("#closeCategoryModalBtn")
+    .addEventListener(
+      "click",
+      closeCategoryModal
+    );
+
+
+  $("#cancelCategoryBtn")
+    .addEventListener(
+      "click",
+      closeCategoryModal
+    );
+
+
+  $("#categoryName")
+    .addEventListener(
+      "input",
+      () => {
+
+        if (
+          !$("#categorySlug")
+            .dataset.edited
+        ) {
+
+          $("#categorySlug").value =
+            slugify(
+              $("#categoryName").value
+            );
+
+        }
 
       }
+    );
 
-    }
-  );
 
-  $("#categorySlug").addEventListener(
-    "input",
-    () => {
+  $("#categorySlug")
+    .addEventListener(
+      "input",
+      () => {
 
-      $("#categorySlug").dataset.edited =
-        "true";
+        $("#categorySlug")
+          .dataset.edited =
+            "true";
 
-    }
-  );
+      }
+    );
 
 
   /* Escape */
@@ -335,31 +518,43 @@ async function handleLogin(event) {
 
   event.preventDefault();
 
-  const message = $("#loginMessage");
+  const message =
+    $("#loginMessage");
 
-  message.className = "message";
-  message.textContent = "Logging in...";
+  message.className =
+    "message";
+
+  message.textContent =
+    "Logging in...";
+
 
   const email =
-    $("#loginEmail").value.trim();
+    $("#loginEmail")
+      .value
+      .trim();
+
 
   const password =
-    $("#loginPassword").value;
+    $("#loginPassword")
+      .value;
 
 
   try {
 
-    const data = await api(
-      "/api/login",
-      {
-        method: "POST",
+    const data =
+      await api(
+        "/api/login",
+        {
+          method: "POST",
 
-        body: JSON.stringify({
-          email,
-          password
-        })
-      }
-    );
+          body:
+            JSON.stringify({
+              email,
+              password
+            })
+        }
+      );
+
 
     message.className =
       "message success";
@@ -367,7 +562,12 @@ async function handleLogin(event) {
     message.textContent =
       "Login successful.";
 
-    showAdmin(data.email || email);
+
+    showAdmin(
+      data.email ||
+      email
+    );
+
 
   } catch (error) {
 
@@ -390,19 +590,42 @@ async function handleRegister(event) {
 
   event.preventDefault();
 
+
   const message =
     $("#registerMessage");
 
-  message.className = "message";
+  message.className =
+    "message";
 
   message.textContent =
     "Creating account...";
 
+
   const email =
-    $("#registerEmail").value.trim();
+    $("#registerEmail")
+      .value
+      .trim();
+
 
   const password =
-    $("#registerPassword").value;
+    $("#registerPassword")
+      .value;
+
+
+  const registrationKey =
+    $("#registerKey")
+      ? $("#registerKey").value.trim()
+      : "";
+
+
+  if (!registrationKey) {
+
+    message.textContent =
+      "Admin registration key is required.";
+
+    return;
+
+  }
 
 
   try {
@@ -412,12 +635,20 @@ async function handleRegister(event) {
       {
         method: "POST",
 
-        body: JSON.stringify({
-          email,
-          password
-        })
+        body:
+          JSON.stringify({
+            email,
+            password,
+
+            /*
+              Worker will verify this against
+              ADMIN_REGISTER_KEY.
+            */
+            registrationKey
+          })
       }
     );
+
 
     message.className =
       "message success";
@@ -425,20 +656,28 @@ async function handleRegister(event) {
     message.textContent =
       "Account created. Please login.";
 
-    $("#registerForm").reset();
 
-    setTimeout(() => {
+    $("#registerForm")
+      .reset();
 
-      $("#registerBox")
-        .classList.add("hidden");
 
-      $("#loginBox")
-        .classList.remove("hidden");
+    setTimeout(
+      () => {
 
-      $("#loginEmail").value =
-        email;
+        $("#registerBox")
+          .classList.add("hidden");
 
-    }, 700);
+        $("#loginBox")
+          .classList.remove("hidden");
+
+        $("#loginEmail")
+          .value =
+            email;
+
+      },
+      700
+    );
+
 
   } catch (error) {
 
@@ -471,6 +710,7 @@ async function logout() {
   } catch {}
 
   location.reload();
+
 }
 
 
@@ -484,16 +724,24 @@ function switchSection(sectionId) {
     .querySelectorAll(".admin-section")
     .forEach(section => {
 
-      section.classList.remove("active");
+      section.classList.remove(
+        "active"
+      );
 
     });
 
+
   const section =
-    document.getElementById(sectionId);
+    document.getElementById(
+      sectionId
+    );
+
 
   if (section) {
 
-    section.classList.add("active");
+    section.classList.add(
+      "active"
+    );
 
   }
 
@@ -504,14 +752,16 @@ function switchSection(sectionId) {
 
       button.classList.toggle(
         "active",
-        button.dataset.section === sectionId
+        button.dataset.section ===
+          sectionId
       );
 
     });
 
 
   if (
-    sectionId === "categoriesSection"
+    sectionId ===
+    "categoriesSection"
   ) {
 
     loadCategories();
@@ -530,6 +780,7 @@ async function loadProducts() {
   const container =
     $("#productsList");
 
+
   container.innerHTML = `
     <div class="empty-state">
       Loading products...
@@ -540,29 +791,34 @@ async function loadProducts() {
   try {
 
     const data =
-      await api("/api/admin/products");
+      await api(
+        "/api/admin/products"
+      );
 
-    /*
-      IMPORTANT:
-      Original Worker returns RAW ARRAY.
-    */
 
     state.products =
       Array.isArray(data)
         ? data
-        : Array.isArray(data?.products)
+        : Array.isArray(
+            data?.products
+          )
           ? data.products
           : [];
 
 
     renderProducts();
 
+
   } catch (error) {
 
     container.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">⚠️</div>
-        <div>${escapeHtml(error.message)}</div>
+        <div>
+          ${escapeHtml(
+            error.message
+          )}
+        </div>
       </div>
     `;
 
@@ -580,8 +836,10 @@ function renderProducts() {
   const container =
     $("#productsList");
 
-  $("#productCount").textContent =
-    state.products.length;
+
+  $("#productCount")
+    .textContent =
+      state.products.length;
 
 
   if (!state.products.length) {
@@ -598,13 +856,15 @@ function renderProducts() {
         </strong>
 
         <p>
-          Click "Add Product" to create your first product.
+          Click "Add Product"
+          to create your first product.
         </p>
 
       </div>
     `;
 
     return;
+
   }
 
 
@@ -613,13 +873,21 @@ function renderProducts() {
       .map(product => {
 
         const image =
-          getProductImage(product);
+          getProductImage(
+            product
+          );
+
 
         const category =
-          getProductCategory(product);
+          getProductCategory(
+            product
+          );
+
 
         const price =
-          Number(product.price || 0);
+          Number(
+            product.price || 0
+          );
 
 
         return `
@@ -632,7 +900,9 @@ function renderProducts() {
                   ? `
                     <img
                       src="${escapeAttr(image)}"
-                      alt="${escapeAttr(product.name || "")}"
+                      alt="${escapeAttr(
+                        product.name || ""
+                      )}"
                     >
                   `
                   : `
@@ -657,11 +927,17 @@ function renderProducts() {
             <div class="product-info">
 
               <strong>
-                ${escapeHtml(product.name || "Untitled")}
+                ${escapeHtml(
+                  product.name ||
+                  "Untitled"
+                )}
               </strong>
 
               <small>
-                ${escapeHtml(category || "No category")}
+                ${escapeHtml(
+                  category ||
+                  "No category"
+                )}
               </small>
 
             </div>
@@ -676,7 +952,9 @@ function renderProducts() {
 
               <span
                 class="product-status ${
-                  product.active ? "" : "off"
+                  product.active
+                    ? ""
+                    : "off"
                 }"
               >
                 ${
@@ -693,21 +971,29 @@ function renderProducts() {
 
               <button
                 class="action-btn"
-                onclick="editProduct('${escapeAttr(product.id)}')"
+                onclick="editProduct('${escapeAttr(
+                  product.id
+                )}')"
               >
                 Edit
               </button>
 
+
               <button
                 class="action-btn"
-                onclick="duplicateProduct('${escapeAttr(product.id)}')"
+                onclick="duplicateProduct('${escapeAttr(
+                  product.id
+                )}')"
               >
                 Duplicate
               </button>
 
+
               <button
                 class="action-btn delete"
-                onclick="deleteProduct('${escapeAttr(product.id)}')"
+                onclick="deleteProduct('${escapeAttr(
+                  product.id
+                )}')"
               >
                 Delete
               </button>
@@ -727,39 +1013,57 @@ function renderProducts() {
    PRODUCT EDITOR
 ========================================================= */
 
-function openProductEditor(product = null) {
+function openProductEditor(
+  product = null
+) {
 
   state.editingProduct =
     product;
 
+
   state.selectedImages = [];
+
   state.existingImages = [];
 
-
-  $("#productForm").reset();
-
-  $("#productId").value =
-    product?.id || "";
-
-  $("#editorTitle").textContent =
-    product
-      ? "Edit Product"
-      : "Add Product";
+  state.deletedImages = [];
 
 
-  $("#productName").value =
-    product?.name || "";
+  $("#productForm")
+    .reset();
 
-  $("#productPrice").value =
-    product?.price ?? "";
 
-  $("#productDescription").value =
-    product?.description || "";
+  $("#productId")
+    .value =
+      product?.id || "";
 
-  $("#productActive").checked =
-    product
-      ? Boolean(product.active)
-      : true;
+
+  $("#editorTitle")
+    .textContent =
+      product
+        ? "Edit Product"
+        : "Add Product";
+
+
+  $("#productName")
+    .value =
+      product?.name || "";
+
+
+  $("#productPrice")
+    .value =
+      product?.price ?? "";
+
+
+  $("#productDescription")
+    .value =
+      product?.description || "";
+
+
+  $("#productActive")
+    .checked =
+      product
+        ? Boolean(product.active)
+        : true;
 
 
   /* Category */
@@ -769,44 +1073,67 @@ function openProductEditor(product = null) {
     product?.data?.category_id ||
     "";
 
-  $("#productCategory").value =
-    categoryId;
+
+  $("#productCategory")
+    .value =
+      categoryId;
 
 
   /* Colours */
 
-  $("#coloursContainer").innerHTML = "";
+  $("#coloursContainer")
+    .innerHTML = "";
+
 
   const colours =
-    Array.isArray(product?.data?.colours)
+    Array.isArray(
+      product?.data?.colours
+    )
       ? product.data.colours
       : [];
 
+
   colours.forEach(
-    colour => addColourRow(colour)
+    colour =>
+      addColourRow(
+        colour
+      )
   );
 
 
   /* Sizes */
 
-  $("#sizesContainer").innerHTML = "";
+  $("#sizesContainer")
+    .innerHTML = "";
+
 
   const sizes =
-    Array.isArray(product?.data?.sizes)
+    Array.isArray(
+      product?.data?.sizes
+    )
       ? product.data.sizes
       : [];
 
+
   sizes.forEach(
-    size => addSizeRow(size)
+    size =>
+      addSizeRow(
+        size
+      )
   );
 
 
   /* Custom variants */
 
   state.customVariants =
-    Array.isArray(product?.data?.variants)
-      ? clone(product.data.variants)
+    Array.isArray(
+      product?.data?.variants
+    )
+      ? clone(
+          product.data.variants
+        )
       : [];
+
 
   renderCustomVariants();
 
@@ -814,16 +1141,24 @@ function openProductEditor(product = null) {
   /* Images */
 
   state.existingImages =
-    getExistingImages(product);
+    getExistingImages(
+      product
+    );
+
 
   renderImages();
 
 
   $("#productEditor")
-    .classList.remove("hidden");
+    .classList.remove(
+      "hidden"
+    );
+
 
   $("#productsListCard")
-    .classList.add("hidden");
+    .classList.add(
+      "hidden"
+    );
 
 
   window.scrollTo({
@@ -837,14 +1172,27 @@ function openProductEditor(product = null) {
 function closeProductEditor() {
 
   $("#productEditor")
-    .classList.add("hidden");
+    .classList.add(
+      "hidden"
+    );
+
 
   $("#productsListCard")
-    .classList.remove("hidden");
+    .classList.remove(
+      "hidden"
+    );
 
-  state.editingProduct = null;
+
+  state.editingProduct =
+    null;
+
+
   state.selectedImages = [];
+
   state.existingImages = [];
+
+  state.deletedImages = [];
+
 }
 
 
@@ -852,12 +1200,17 @@ function closeProductEditor() {
    EDIT PRODUCT
 ========================================================= */
 
-async function editProduct(productId) {
+async function editProduct(
+  productId
+) {
 
   const product =
     state.products.find(
-      item => item.id === productId
+      item =>
+        item.id ===
+        productId
     );
+
 
   if (!product) {
 
@@ -867,10 +1220,14 @@ async function editProduct(productId) {
     );
 
     return;
+
   }
 
 
-  openProductEditor(product);
+  openProductEditor(
+    product
+  );
+
 }
 
 
@@ -878,12 +1235,17 @@ async function editProduct(productId) {
    DUPLICATE
 ========================================================= */
 
-async function duplicateProduct(productId) {
+async function duplicateProduct(
+  productId
+) {
 
   const product =
     state.products.find(
-      item => item.id === productId
+      item =>
+        item.id ===
+        productId
     );
+
 
   if (!product) {
 
@@ -893,6 +1255,7 @@ async function duplicateProduct(productId) {
     );
 
     return;
+
   }
 
 
@@ -903,17 +1266,27 @@ async function duplicateProduct(productId) {
   ) {
 
     return;
+
   }
 
 
   try {
 
     const payload =
-      buildProductPayload(product);
+      buildProductPayload(
+        product
+      );
 
 
     payload.name =
       `${product.name} (Copy)`;
+
+
+    /*
+      Don't send the original ID.
+    */
+
+    delete payload.id;
 
 
     const result =
@@ -922,9 +1295,10 @@ async function duplicateProduct(productId) {
         {
           method: "POST",
 
-          body: JSON.stringify(
-            payload
-          )
+          body:
+            JSON.stringify(
+              payload
+            )
         }
       );
 
@@ -941,7 +1315,8 @@ async function duplicateProduct(productId) {
     const newProduct =
       state.products.find(
         item =>
-          item.id === result.id
+          item.id ===
+          result.id
       );
 
 
@@ -952,6 +1327,7 @@ async function duplicateProduct(productId) {
       );
 
     }
+
 
   } catch (error) {
 
@@ -966,15 +1342,20 @@ async function duplicateProduct(productId) {
 
 
 /* =========================================================
-   DELETE
+   DELETE PRODUCT
 ========================================================= */
 
-async function deleteProduct(productId) {
+async function deleteProduct(
+  productId
+) {
 
   const product =
     state.products.find(
-      item => item.id === productId
+      item =>
+        item.id ===
+        productId
     );
+
 
   if (!product) return;
 
@@ -986,13 +1367,16 @@ async function deleteProduct(productId) {
   ) {
 
     return;
+
   }
 
 
   try {
 
     await api(
-      `/api/admin/products/${encodeURIComponent(productId)}`,
+      `/api/admin/products/${encodeURIComponent(
+        productId
+      )}`,
       {
         method: "DELETE"
       }
@@ -1006,6 +1390,7 @@ async function deleteProduct(productId) {
 
 
     await loadProducts();
+
 
   } catch (error) {
 
@@ -1023,7 +1408,9 @@ async function deleteProduct(productId) {
    SAVE PRODUCT
 ========================================================= */
 
-async function saveProduct(event) {
+async function saveProduct(
+  event
+) {
 
   event.preventDefault();
 
@@ -1031,7 +1418,10 @@ async function saveProduct(event) {
   const saveButton =
     $("#saveProductBtn");
 
-  saveButton.disabled = true;
+
+  saveButton.disabled =
+    true;
+
 
   saveButton.textContent =
     "Saving...";
@@ -1052,15 +1442,19 @@ async function saveProduct(event) {
 
       result =
         await api(
-          `/api/admin/products/${encodeURIComponent(payload.id)}`,
+          `/api/admin/products/${encodeURIComponent(
+            payload.id
+          )}`,
           {
             method: "PUT",
 
-            body: JSON.stringify(
-              payload
-            )
+            body:
+              JSON.stringify(
+                payload
+              )
           }
         );
+
 
     } else {
 
@@ -1070,9 +1464,10 @@ async function saveProduct(event) {
           {
             method: "POST",
 
-            body: JSON.stringify(
-              payload
-            )
+            body:
+              JSON.stringify(
+                payload
+              )
           }
         );
 
@@ -1093,7 +1488,24 @@ async function saveProduct(event) {
     }
 
 
-    /* Upload newly selected images */
+    /*
+      IMPORTANT:
+      Delete images only AFTER the product
+      itself has been successfully saved.
+    */
+
+    if (
+      state.deletedImages.length
+    ) {
+
+      await deleteMarkedImages(
+        productId
+      );
+
+    }
+
+
+    /* Upload new images */
 
     if (
       state.selectedImages.length
@@ -1116,19 +1528,7 @@ async function saveProduct(event) {
     await loadProducts();
 
 
-    const updatedProduct =
-      state.products.find(
-        item => item.id === productId
-      );
-
-
     closeProductEditor();
-
-
-    /*
-      Keep editor closed after save.
-      User can edit again from product list.
-    */
 
 
   } catch (error) {
@@ -1140,7 +1540,8 @@ async function saveProduct(event) {
 
   } finally {
 
-    saveButton.disabled = false;
+    saveButton.disabled =
+      false;
 
     saveButton.textContent =
       "Save Product";
@@ -1159,7 +1560,8 @@ function buildProductPayload(
 ) {
 
   const source =
-    productOverride || {};
+    productOverride ||
+    {};
 
 
   const productId =
@@ -1191,7 +1593,9 @@ function buildProductPayload(
   const active =
     $("#productActive")
       ? $("#productActive").checked
-      : Boolean(source.active);
+      : Boolean(
+          source.active
+        );
 
 
   const categoryId =
@@ -1203,7 +1607,8 @@ function buildProductPayload(
   const colours =
     productOverride
       ? clone(
-          source.data?.colours || []
+          source.data?.colours ||
+          []
         )
       : readColourRows();
 
@@ -1211,7 +1616,8 @@ function buildProductPayload(
   const sizes =
     productOverride
       ? clone(
-          source.data?.sizes || []
+          source.data?.sizes ||
+          []
         )
       : readSizeRows();
 
@@ -1219,7 +1625,8 @@ function buildProductPayload(
   const variants =
     productOverride
       ? clone(
-          source.data?.variants || []
+          source.data?.variants ||
+          []
         )
       : clone(
           state.customVariants
@@ -1229,7 +1636,8 @@ function buildProductPayload(
   const images =
     productOverride
       ? clone(
-          source.data?.images || []
+          source.data?.images ||
+          []
         )
       : getExistingImages(
           state.editingProduct
@@ -1238,9 +1646,13 @@ function buildProductPayload(
 
   const data =
     productOverride
-      ? clone(source.data || {})
+      ? clone(
+          source.data ||
+          {}
+        )
       : clone(
-          state.editingProduct?.data || {}
+          state.editingProduct?.data ||
+          {}
         );
 
 
@@ -1266,7 +1678,8 @@ function buildProductPayload(
 
   return {
 
-    id: productId,
+    id:
+      productId,
 
     name,
 
@@ -1287,14 +1700,19 @@ function buildProductPayload(
    COLOURS
 ========================================================= */
 
-function addColourRow(data = {}) {
+function addColourRow(
+  data = {}
+) {
 
   const container =
     $("#coloursContainer");
 
 
   const row =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
+
 
   row.className =
     "variant-row";
@@ -1306,7 +1724,9 @@ function addColourRow(data = {}) {
       type="text"
       class="colour-name"
       placeholder="Colour name"
-      value="${escapeAttr(data.name || "")}"
+      value="${escapeAttr(
+        data.name || ""
+      )}"
     >
 
     <select class="colour-price-type">
@@ -1355,14 +1775,18 @@ function addColourRow(data = {}) {
 
 
   row
-    .querySelector(".remove-btn")
+    .querySelector(
+      ".remove-btn"
+    )
     .addEventListener(
       "click",
       () => row.remove()
     );
 
 
-  container.appendChild(row);
+  container.appendChild(
+    row
+  );
 
 }
 
@@ -1378,9 +1802,12 @@ function readColourRows() {
 
       const name =
         row
-          .querySelector(".colour-name")
+          .querySelector(
+            ".colour-name"
+          )
           .value
           .trim();
+
 
       if (!name) return null;
 
@@ -1393,15 +1820,20 @@ function readColourRows() {
         name,
 
         priceType:
-          row.querySelector(
-            ".colour-price-type"
-          ).value,
+          row
+            .querySelector(
+              ".colour-price-type"
+            )
+            .value,
 
         price:
           Number(
-            row.querySelector(
-              ".colour-price"
-            ).value || 0
+            row
+              .querySelector(
+                ".colour-price"
+              )
+              .value ||
+            0
           )
 
       };
@@ -1416,14 +1848,19 @@ function readColourRows() {
    SIZES
 ========================================================= */
 
-function addSizeRow(data = {}) {
+function addSizeRow(
+  data = {}
+) {
 
   const container =
     $("#sizesContainer");
 
 
   const row =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
+
 
   row.className =
     "variant-row";
@@ -1435,7 +1872,9 @@ function addSizeRow(data = {}) {
       type="text"
       class="size-name"
       placeholder="Size"
-      value="${escapeAttr(data.name || "")}"
+      value="${escapeAttr(
+        data.name || ""
+      )}"
     >
 
     <select class="size-price-type">
@@ -1484,14 +1923,18 @@ function addSizeRow(data = {}) {
 
 
   row
-    .querySelector(".remove-btn")
+    .querySelector(
+      ".remove-btn"
+    )
     .addEventListener(
       "click",
       () => row.remove()
     );
 
 
-  container.appendChild(row);
+  container.appendChild(
+    row
+  );
 
 }
 
@@ -1507,9 +1950,12 @@ function readSizeRows() {
 
       const name =
         row
-          .querySelector(".size-name")
+          .querySelector(
+            ".size-name"
+          )
           .value
           .trim();
+
 
       if (!name) return null;
 
@@ -1522,15 +1968,20 @@ function readSizeRows() {
         name,
 
         priceType:
-          row.querySelector(
-            ".size-price-type"
-          ).value,
+          row
+            .querySelector(
+              ".size-price-type"
+            )
+            .value,
 
         price:
           Number(
-            row.querySelector(
-              ".size-price"
-            ).value || 0
+            row
+              .querySelector(
+                ".size-price"
+              )
+              .value ||
+            0
           )
 
       };
@@ -1545,20 +1996,23 @@ function readSizeRows() {
    CUSTOM VARIANTS
 ========================================================= */
 
-function addCustomVariant(data = null) {
+function addCustomVariant(
+  data = null
+) {
 
-  const variant = data
-    ? clone(data)
-    : {
+  const variant =
+    data
+      ? clone(data)
+      : {
 
-        id:
-          crypto.randomUUID(),
+          id:
+            crypto.randomUUID(),
 
-        name: "",
+          name: "",
 
-        options: []
+          options: []
 
-      };
+        };
 
 
   if (
@@ -1576,6 +2030,7 @@ function addCustomVariant(data = null) {
     variant
   );
 
+
   renderCustomVariants();
 
 }
@@ -1586,15 +2041,22 @@ function renderCustomVariants() {
   const container =
     $("#customVariantsContainer");
 
+
   container.innerHTML = "";
 
 
   state.customVariants
     .forEach(
-      (variant, variantIndex) => {
+      (
+        variant,
+        variantIndex
+      ) => {
 
         const card =
-          document.createElement("div");
+          document.createElement(
+            "div"
+          );
+
 
         card.className =
           "custom-variant-card";
@@ -1608,7 +2070,9 @@ function renderCustomVariants() {
               class="custom-variant-name"
               type="text"
               placeholder="Variant name — e.g. Design"
-              value="${escapeAttr(variant.name || "")}"
+              value="${escapeAttr(
+                variant.name || ""
+              )}"
             >
 
             <button
@@ -1639,15 +2103,16 @@ function renderCustomVariants() {
           );
 
 
-        nameInput.addEventListener(
-          "input",
-          () => {
+        nameInput
+          .addEventListener(
+            "input",
+            () => {
 
-            variant.name =
-              nameInput.value;
+              variant.name =
+                nameInput.value;
 
-          }
-        );
+            }
+          );
 
 
         card
@@ -1676,9 +2141,15 @@ function renderCustomVariants() {
           );
 
 
-        (variant.options || [])
+        (
+          variant.options ||
+          []
+        )
           .forEach(
-            (option, optionIndex) => {
+            (
+              option,
+              optionIndex
+            ) => {
 
               renderOptionRow(
                 optionList,
@@ -1706,11 +2177,13 @@ function renderCustomVariants() {
 
                 name: "",
 
-                priceType: "INR",
+                priceType:
+                  "INR",
 
                 price: 0
 
               });
+
 
               renderCustomVariants();
 
@@ -1718,7 +2191,9 @@ function renderCustomVariants() {
           );
 
 
-        container.appendChild(card);
+        container.appendChild(
+          card
+        );
 
       }
     );
@@ -1734,7 +2209,10 @@ function renderOptionRow(
 ) {
 
   const row =
-    document.createElement("div");
+    document.createElement(
+      "div"
+    );
+
 
   row.className =
     "option-row";
@@ -1746,7 +2224,9 @@ function renderOptionRow(
       type="text"
       class="option-name"
       placeholder="Option name"
-      value="${escapeAttr(option.name || "")}"
+      value="${escapeAttr(
+        option.name || ""
+      )}"
     >
 
     <select class="option-price-type">
@@ -1795,7 +2275,9 @@ function renderOptionRow(
 
 
   row
-    .querySelector(".option-name")
+    .querySelector(
+      ".option-name"
+    )
     .addEventListener(
       "input",
       event => {
@@ -1808,7 +2290,9 @@ function renderOptionRow(
 
 
   row
-    .querySelector(".option-price-type")
+    .querySelector(
+      ".option-price-type"
+    )
     .addEventListener(
       "change",
       event => {
@@ -1821,14 +2305,17 @@ function renderOptionRow(
 
 
   row
-    .querySelector(".option-price")
+    .querySelector(
+      ".option-price"
+    )
     .addEventListener(
       "input",
       event => {
 
         option.price =
           Number(
-            event.target.value || 0
+            event.target.value ||
+            0
           );
 
       }
@@ -1836,7 +2323,9 @@ function renderOptionRow(
 
 
   row
-    .querySelector(".remove-btn")
+    .querySelector(
+      ".remove-btn"
+    )
     .addEventListener(
       "click",
       () => {
@@ -1853,7 +2342,9 @@ function renderOptionRow(
     );
 
 
-  container.appendChild(row);
+  container.appendChild(
+    row
+  );
 
 }
 
@@ -1862,7 +2353,9 @@ function renderOptionRow(
    IMAGES - SELECTION
 ========================================================= */
 
-function handleImageSelection(event) {
+function handleImageSelection(
+  event
+) {
 
   const files =
     [...event.target.files];
@@ -1882,6 +2375,7 @@ function handleImageSelection(event) {
 
 
   event.target.value = "";
+
 }
 
 
@@ -1894,17 +2388,24 @@ function renderImages() {
   const container =
     $("#imagePreviewContainer");
 
+
   container.innerHTML = "";
 
 
-  /* Existing */
+  /* Existing images */
 
   state.existingImages
     .forEach(
-      (image, index) => {
+      (
+        image,
+        index
+      ) => {
 
         const item =
-          document.createElement("div");
+          document.createElement(
+            "div"
+          );
+
 
         item.className =
           "image-preview";
@@ -1913,7 +2414,9 @@ function renderImages() {
         item.innerHTML = `
 
           <img
-            src="${escapeAttr(image.url)}"
+            src="${escapeAttr(
+              image.url
+            )}"
             alt=""
           >
 
@@ -1944,7 +2447,9 @@ function renderImages() {
           );
 
 
-        container.appendChild(item);
+        container.appendChild(
+          item
+        );
 
       }
     );
@@ -1954,33 +2459,51 @@ function renderImages() {
 
   state.selectedImages
     .forEach(
-      (file, index) => {
+      (
+        file,
+        index
+      ) => {
 
         const item =
-          document.createElement("div");
+          document.createElement(
+            "div"
+          );
+
 
         item.className =
           "image-preview";
 
 
         const image =
-          document.createElement("img");
+          document.createElement(
+            "img"
+          );
 
 
         image.src =
-          URL.createObjectURL(file);
+          URL.createObjectURL(
+            file
+          );
 
 
-        item.appendChild(image);
+        item.appendChild(
+          image
+        );
 
 
         const button =
-          document.createElement("button");
+          document.createElement(
+            "button"
+          );
 
-        button.type = "button";
+
+        button.type =
+          "button";
+
 
         button.className =
           "remove-image";
+
 
         button.textContent =
           "✕";
@@ -1991,7 +2514,10 @@ function renderImages() {
           () => {
 
             state.selectedImages
-              .splice(index, 1);
+              .splice(
+                index,
+                1
+              );
 
             renderImages();
 
@@ -1999,9 +2525,14 @@ function renderImages() {
         );
 
 
-        item.appendChild(button);
+        item.appendChild(
+          button
+        );
 
-        container.appendChild(item);
+
+        container.appendChild(
+          item
+        );
 
       }
     );
@@ -2009,14 +2540,24 @@ function renderImages() {
 }
 
 
-function getExistingImages(product) {
+/* =========================================================
+   EXISTING IMAGES
+========================================================= */
+
+function getExistingImages(
+  product
+) {
 
   const images =
     product?.data?.images;
 
 
-  if (!Array.isArray(images)) {
+  if (
+    !Array.isArray(images)
+  ) {
+
     return [];
+
   }
 
 
@@ -2024,83 +2565,181 @@ function getExistingImages(product) {
     .map(item => {
 
       if (
-        typeof item === "string"
+        typeof item ===
+        "string"
       ) {
 
         return {
+
           url: item,
-          key: ""
+
+          key:
+            extractImageKey(
+              item
+            )
+
         };
 
       }
 
 
+      const url =
+        item.url ||
+        item.imageUrl ||
+        "";
+
+
       return {
 
-        url:
-          item.url ||
-          item.imageUrl ||
-          "",
+        url,
 
         key:
           item.key ||
           item.objectKey ||
-          ""
+          extractImageKey(url)
 
       };
 
     })
     .filter(
-      item => item.url
+      item =>
+        item.url
     );
-
-}
-
-
-function removeExistingImage(index) {
-
-  const image =
-    state.existingImages[index];
-
-
-  if (!image) return;
-
-
-  if (
-    image.key &&
-    state.editingProduct?.id
-  ) {
-
-    deleteRemoteImage(
-      image,
-      index
-    );
-
-  } else {
-
-    state.existingImages
-      .splice(index, 1);
-
-    renderImages();
-
-  }
 
 }
 
 
 /* =========================================================
-   DELETE REMOTE IMAGE
+   EXTRACT R2 KEY FROM MEDIA URL
 ========================================================= */
 
-async function deleteRemoteImage(
-  image,
+function extractImageKey(
+  url
+) {
+
+  if (!url) {
+    return "";
+  }
+
+
+  try {
+
+    const parsed =
+      new URL(
+        url,
+        location.origin
+      );
+
+
+    const prefix =
+      "/media/";
+
+
+    if (
+      parsed.pathname
+        .startsWith(prefix)
+    ) {
+
+      return decodeURIComponent(
+        parsed.pathname.slice(
+          prefix.length
+        )
+      );
+
+    }
+
+  } catch {}
+
+
+  /*
+    Also support direct relative
+    /media/xxx URLs.
+  */
+
+  if (
+    url.startsWith(
+      "/media/"
+    )
+  ) {
+
+    try {
+
+      return decodeURIComponent(
+        url.slice(
+          "/media/".length
+        )
+      );
+
+    } catch {}
+
+  }
+
+
+  return "";
+
+}
+
+
+/* =========================================================
+   REMOVE EXISTING IMAGE
+========================================================= */
+
+function removeExistingImage(
   index
 ) {
 
+  const image =
+    state.existingImages[
+      index
+    ];
+
+
+  if (!image) {
+    return;
+  }
+
+
+  /*
+    IMPORTANT:
+    Do NOT delete R2 immediately.
+
+    Just mark it for deletion.
+    Actual deletion happens after SAVE.
+  */
+
+  state.deletedImages.push(
+    clone(image)
+  );
+
+
+  state.existingImages
+    .splice(
+      index,
+      1
+    );
+
+
+  renderImages();
+
+
+  toast(
+    "Image marked for deletion. Click Save Product to delete it.",
+    "success"
+  );
+
+}
+
+
+/* =========================================================
+   DELETE MARKED IMAGES
+========================================================= */
+
+async function deleteMarkedImages(
+  productId
+) {
+
   if (
-    !confirm(
-      "Delete this image?"
-    )
+    !state.deletedImages.length
   ) {
 
     return;
@@ -2108,45 +2747,74 @@ async function deleteRemoteImage(
   }
 
 
-  try {
+  const images =
+    [...state.deletedImages];
 
-    const encodedKey =
-      encodeURIComponent(
-        image.key
+
+  const failed = [];
+
+
+  for (
+    const image of images
+  ) {
+
+    if (!image.key) {
+
+      failed.push(image);
+
+      continue;
+
+    }
+
+
+    try {
+
+      const encodedKey =
+        encodeURIComponent(
+          image.key
+        );
+
+
+      const url =
+        `/api/admin/product-images/${encodedKey}` +
+        `?productId=${encodeURIComponent(
+          productId
+        )}`;
+
+
+      await api(
+        url,
+        {
+          method: "DELETE"
+        }
       );
 
 
-    const url =
-      `/api/admin/product-images/${encodedKey}` +
-      `?productId=${encodeURIComponent(
-        state.editingProduct.id
-      )}`;
+    } catch (error) {
+
+      console.error(
+        "Image delete failed:",
+        error
+      );
 
 
-    await api(
-      url,
-      {
-        method: "DELETE"
-      }
-    );
+      failed.push({
+        image,
+        error
+      });
+
+    }
+
+  }
 
 
-    state.existingImages
-      .splice(index, 1);
+  state.deletedImages = [];
 
 
-    renderImages();
-
-
-    toast(
-      "Image deleted.",
-      "success"
-    );
-
-  } catch (error) {
+  if (failed.length) {
 
     toast(
-      error.message,
+      `${failed.length} image(s) could not be deleted from storage.`,
       "error"
     );
 
@@ -2170,7 +2838,9 @@ async function uploadImages(
 
 
   $("#uploadModal")
-    .classList.remove("hidden");
+    .classList.remove(
+      "hidden"
+    );
 
 
   updateUploadProgress(
@@ -2208,10 +2878,14 @@ async function uploadImages(
 
           const overall =
             (
-              (i + progress / 100)
-              /
+              (
+                i +
+                progress /
+                  100
+              ) /
               files.length
-            ) * 100;
+            ) *
+            100;
 
 
           updateUploadProgress(
@@ -2237,10 +2911,13 @@ async function uploadImages(
 
     await sleep(500);
 
+
   } finally {
 
     $("#uploadModal")
-      .classList.add("hidden");
+      .classList.add(
+        "hidden"
+      );
 
   }
 
@@ -2254,7 +2931,10 @@ function uploadSingleImage(
 ) {
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
 
       const xhr =
         new XMLHttpRequest();
@@ -2281,9 +2961,13 @@ function uploadSingleImage(
               (
                 event.loaded /
                 event.total
-              ) * 100;
+              ) *
+              100;
 
-            onProgress(percent);
+
+            onProgress(
+              percent
+            );
 
           }
 
@@ -2293,7 +2977,9 @@ function uploadSingleImage(
       xhr.onload =
         () => {
 
-          let data = null;
+          let data =
+            null;
+
 
           try {
 
@@ -2310,7 +2996,9 @@ function uploadSingleImage(
             xhr.status < 300
           ) {
 
-            resolve(data);
+            resolve(
+              data
+            );
 
           } else {
 
@@ -2347,13 +3035,22 @@ function uploadSingleImage(
         productId
       );
 
+
+      /*
+        Keep "image" because your
+        current Worker/admin setup
+        uses this field.
+      */
+
       formData.append(
         "image",
         file
       );
 
 
-      xhr.send(formData);
+      xhr.send(
+        formData
+      );
 
     }
   );
@@ -2373,7 +3070,9 @@ function updateUploadProgress(
       0,
       Math.min(
         100,
-        Math.round(percent)
+        Math.round(
+          percent
+        )
       )
     );
 
@@ -2408,7 +3107,7 @@ function updateUploadProgress(
 
 
 /* =========================================================
-   CATEGORIES
+   CATEGORIES - LOAD
 ========================================================= */
 
 async function loadCategories() {
@@ -2424,13 +3123,69 @@ async function loadCategories() {
     state.categories =
       Array.isArray(data)
         ? data
-        : Array.isArray(data?.categories)
+        : Array.isArray(
+            data?.categories
+          )
           ? data.categories
           : [];
 
 
+    /*
+      Sort by saved order.
+      Fallback to name.
+    */
+
+    state.categories.sort(
+      (
+        a,
+        b
+      ) => {
+
+        const orderA =
+          Number(
+            a.sort_order ??
+            a.position ??
+            999999
+          );
+
+
+        const orderB =
+          Number(
+            b.sort_order ??
+            b.position ??
+            999999
+          );
+
+
+        if (
+          orderA !==
+          orderB
+        ) {
+
+          return (
+            orderA -
+            orderB
+          );
+
+        }
+
+
+        return String(
+          a.name || ""
+        ).localeCompare(
+          String(
+            b.name || ""
+          )
+        );
+
+      }
+    );
+
+
     renderCategorySelect();
+
     renderCategoriesList();
+
 
   } catch (error) {
 
@@ -2438,6 +3193,23 @@ async function loadCategories() {
       "Category load error:",
       error
     );
+
+
+    const container =
+      $("#categoriesList");
+
+
+    if (container) {
+
+      container.innerHTML = `
+        <div class="empty-state">
+          ⚠️ ${escapeHtml(
+            error.message
+          )}
+        </div>
+      `;
+
+    }
 
   }
 
@@ -2454,7 +3226,9 @@ function renderCategorySelect() {
     $("#productCategory");
 
 
-  if (!select) return;
+  if (!select) {
+    return;
+  }
 
 
   const current =
@@ -2469,21 +3243,29 @@ function renderCategorySelect() {
 
 
   state.categories
-    .forEach(category => {
+    .forEach(
+      category => {
 
-      const option =
-        document.createElement("option");
-
-      option.value =
-        category.id;
-
-      option.textContent =
-        category.name;
+        const option =
+          document.createElement(
+            "option"
+          );
 
 
-      select.appendChild(option);
+        option.value =
+          category.id;
 
-    });
+
+        option.textContent =
+          category.name;
+
+
+        select.appendChild(
+          option
+        );
+
+      }
+    );
 
 
   if (current) {
@@ -2504,6 +3286,11 @@ function renderCategoriesList() {
 
   const container =
     $("#categoriesList");
+
+
+  if (!container) {
+    return;
+  }
 
 
   $("#categoryCount")
@@ -2536,28 +3323,456 @@ function renderCategoriesList() {
   }
 
 
-  container.innerHTML =
-    state.categories
-      .map(category => `
+  container.innerHTML = "";
 
-        <div class="category-row">
+
+  state.categories
+    .forEach(
+      (
+        category,
+        index
+      ) => {
+
+        const row =
+          document.createElement(
+            "div"
+          );
+
+
+        row.className =
+          "category-row";
+
+
+        row.draggable =
+          true;
+
+
+        row.dataset.categoryId =
+          category.id;
+
+
+        row.innerHTML = `
+
+          <div
+            class="category-drag"
+            title="Drag to reorder"
+          >
+            ☰
+          </div>
+
+          <div class="category-position">
+            ${index + 1}
+          </div>
 
           <div class="category-name">
-            ${escapeHtml(category.name)}
+            ${escapeHtml(
+              category.name
+            )}
           </div>
 
           <div class="category-slug">
-            ${escapeHtml(category.slug)}
+            ${escapeHtml(
+              category.slug
+            )}
           </div>
 
           <div class="category-active">
             ● Active
           </div>
 
-        </div>
+          <button
+            type="button"
+            class="action-btn delete category-delete-btn"
+            data-category-id="${escapeAttr(
+              category.id
+            )}"
+          >
+            Delete
+          </button>
 
-      `)
-      .join("");
+        `;
+
+
+        /* Drag start */
+
+        row.addEventListener(
+          "dragstart",
+          event => {
+
+            state.draggedCategoryId =
+              category.id;
+
+
+            row.classList.add(
+              "dragging"
+            );
+
+
+            event.dataTransfer.effectAllowed =
+              "move";
+
+
+            event.dataTransfer.setData(
+              "text/plain",
+              category.id
+            );
+
+          }
+        );
+
+
+        /* Drag end */
+
+        row.addEventListener(
+          "dragend",
+          () => {
+
+            row.classList.remove(
+              "dragging"
+            );
+
+
+            document
+              .querySelectorAll(
+                ".category-row"
+              )
+              .forEach(
+                item =>
+                  item.classList.remove(
+                    "drag-over"
+                  )
+              );
+
+
+            state.draggedCategoryId =
+              null;
+
+          }
+        );
+
+
+        /* Drag over */
+
+        row.addEventListener(
+          "dragover",
+          event => {
+
+            event.preventDefault();
+
+            event.dataTransfer.dropEffect =
+              "move";
+
+
+            if (
+              state.draggedCategoryId &&
+              state.draggedCategoryId !==
+                category.id
+            ) {
+
+              row.classList.add(
+                "drag-over"
+              );
+
+            }
+
+          }
+        );
+
+
+        row.addEventListener(
+          "dragleave",
+          () => {
+
+            row.classList.remove(
+              "drag-over"
+            );
+
+          }
+        );
+
+
+        /* Drop */
+
+        row.addEventListener(
+          "drop",
+          async event => {
+
+            event.preventDefault();
+
+
+            row.classList.remove(
+              "drag-over"
+            );
+
+
+            const draggedId =
+              event.dataTransfer.getData(
+                "text/plain"
+              ) ||
+              state.draggedCategoryId;
+
+
+            if (
+              !draggedId ||
+              draggedId ===
+                category.id
+            ) {
+
+              return;
+
+            }
+
+
+            await moveCategory(
+              draggedId,
+              category.id
+            );
+
+          }
+        );
+
+
+        /* Delete */
+
+        row
+          .querySelector(
+            ".category-delete-btn"
+          )
+          .addEventListener(
+            "click",
+            () => {
+
+              deleteCategory(
+                category
+              );
+
+            }
+          );
+
+
+        container.appendChild(
+          row
+        );
+
+      }
+    );
+
+}
+
+
+/* =========================================================
+   MOVE CATEGORY
+========================================================= */
+
+async function moveCategory(
+  draggedId,
+  targetId
+) {
+
+  const oldIndex =
+    state.categories.findIndex(
+      category =>
+        category.id ===
+        draggedId
+    );
+
+
+  const newIndex =
+    state.categories.findIndex(
+      category =>
+        category.id ===
+        targetId
+    );
+
+
+  if (
+    oldIndex === -1 ||
+    newIndex === -1
+  ) {
+
+    return;
+
+  }
+
+
+  /*
+    Update UI immediately.
+  */
+
+  const moved =
+    state.categories.splice(
+      oldIndex,
+      1
+    )[0];
+
+
+  state.categories.splice(
+    newIndex,
+    0,
+    moved
+  );
+
+
+  renderCategoriesList();
+
+
+  try {
+
+    await saveCategoryOrder();
+
+
+    toast(
+      "Category order saved.",
+      "success"
+    );
+
+
+  } catch (error) {
+
+    toast(
+      error.message,
+      "error"
+    );
+
+
+    /*
+      Reload from server if saving failed.
+    */
+
+    await loadCategories();
+
+  }
+
+}
+
+
+/* =========================================================
+   SAVE CATEGORY ORDER
+========================================================= */
+
+async function saveCategoryOrder() {
+
+  const categories =
+    state.categories.map(
+      (
+        category,
+        index
+      ) => ({
+
+        id:
+          category.id,
+
+        sort_order:
+          index
+
+      })
+    );
+
+
+  await api(
+    "/api/admin/categories/reorder",
+    {
+      method: "POST",
+
+      body:
+        JSON.stringify({
+          categories
+        })
+    }
+  );
+
+}
+
+
+/* =========================================================
+   DELETE CATEGORY
+========================================================= */
+
+async function deleteCategory(
+  category
+) {
+
+  if (!category) {
+    return;
+  }
+
+
+  /*
+    Check whether products are using
+    this category.
+  */
+
+  const productsUsing =
+    state.products.filter(
+      product => {
+
+        const categoryId =
+          product?.data?.categoryId ||
+          product?.data?.category_id ||
+          "";
+
+        return (
+          categoryId ===
+          category.id
+        );
+
+      }
+    );
+
+
+  let message =
+    `Delete category "${category.name}"?`;
+
+
+  if (
+    productsUsing.length
+  ) {
+
+    message +=
+      `\n\n${productsUsing.length} product(s) currently use this category.` +
+      `\n\nThe products will remain, but their category may become unavailable.`;
+
+  }
+
+
+  if (
+    !confirm(message)
+  ) {
+
+    return;
+
+  }
+
+
+  try {
+
+    await api(
+      `/api/admin/categories/${encodeURIComponent(
+        category.id
+      )}`,
+      {
+        method: "DELETE"
+      }
+    );
+
+
+    toast(
+      "Category deleted.",
+      "success"
+    );
+
+
+    await loadCategories();
+
+
+  } catch (error) {
+
+    toast(
+      error.message,
+      "error"
+    );
+
+  }
 
 }
 
@@ -2569,21 +3784,29 @@ function renderCategoriesList() {
 function openCategoryModal() {
 
   $("#categoryModal")
-    .classList.remove("hidden");
+    .classList.remove(
+      "hidden"
+    );
 
 
-  $("#categoryForm").reset();
+  $("#categoryForm")
+    .reset();
 
-  delete $("#categorySlug")
-    .dataset.edited;
+
+  delete $(
+    "#categorySlug"
+  ).dataset.edited;
 
 
   $("#categoryMessage")
-    .textContent = "";
+    .textContent =
+      "";
 
 
   setTimeout(
-    () => $("#categoryName").focus(),
+    () =>
+      $("#categoryName")
+        .focus(),
     50
   );
 
@@ -2593,7 +3816,9 @@ function openCategoryModal() {
 function closeCategoryModal() {
 
   $("#categoryModal")
-    .classList.add("hidden");
+    .classList.add(
+      "hidden"
+    );
 
 }
 
@@ -2602,7 +3827,9 @@ function closeCategoryModal() {
    CREATE CATEGORY
 ========================================================= */
 
-async function createCategory(event) {
+async function createCategory(
+  event
+) {
 
   event.preventDefault();
 
@@ -2644,6 +3871,7 @@ async function createCategory(event) {
   message.className =
     "message";
 
+
   message.textContent =
     "Creating category...";
 
@@ -2655,10 +3883,11 @@ async function createCategory(event) {
       {
         method: "POST",
 
-        body: JSON.stringify({
-          name,
-          slug
-        })
+        body:
+          JSON.stringify({
+            name,
+            slug
+          })
       }
     );
 
@@ -2666,17 +3895,13 @@ async function createCategory(event) {
     message.className =
       "message success";
 
+
     message.textContent =
       "Category created.";
 
 
     await loadCategories();
 
-
-    /*
-      If opened from product editor,
-      automatically select new category.
-    */
 
     const created =
       state.categories.find(
@@ -2701,10 +3926,12 @@ async function createCategory(event) {
       400
     );
 
+
   } catch (error) {
 
     message.className =
       "message";
+
 
     message.textContent =
       error.message;
@@ -2718,7 +3945,9 @@ async function createCategory(event) {
    HELPERS
 ========================================================= */
 
-function getProductImage(product) {
+function getProductImage(
+  product
+) {
 
   if (
     product?.imageUrl
@@ -2730,15 +3959,22 @@ function getProductImage(product) {
 
 
   const images =
-    getExistingImages(product);
+    getExistingImages(
+      product
+    );
 
 
-  return images[0]?.url || "";
+  return (
+    images[0]?.url ||
+    ""
+  );
 
 }
 
 
-function getProductCategory(product) {
+function getProductCategory(
+  product
+) {
 
   const categoryId =
     product?.data?.categoryId ||
@@ -2753,16 +3989,22 @@ function getProductCategory(product) {
   const category =
     state.categories.find(
       item =>
-        item.id === categoryId
+        item.id ===
+        categoryId
     );
 
 
-  return category?.name || "";
+  return (
+    category?.name ||
+    ""
+  );
 
 }
 
 
-function formatMoney(value) {
+function formatMoney(
+  value
+) {
 
   return Number(
     value || 0
@@ -2777,27 +4019,42 @@ function formatMoney(value) {
 }
 
 
-function slugify(value) {
+function slugify(
+  value
+) {
 
-  return String(value || "")
+  return String(
+    value || ""
+  )
     .trim()
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(
+      /[^a-z0-9]+/g,
+      "-"
+    )
+    .replace(
+      /^-+|-+$/g,
+      "");
 
 }
 
 
-function clone(value) {
+function clone(
+  value
+) {
 
   return JSON.parse(
-    JSON.stringify(value)
+    JSON.stringify(
+      value
+    )
   );
 
 }
 
 
-function sleep(ms) {
+function sleep(
+  ms
+) {
 
   return new Promise(
     resolve =>
@@ -2814,9 +4071,13 @@ function sleep(ms) {
    HTML SAFETY
 ========================================================= */
 
-function escapeHtml(value) {
+function escapeHtml(
+  value
+) {
 
-  return String(value ?? "")
+  return String(
+    value ?? ""
+  )
     .replace(
       /&/g,
       "&amp;"
@@ -2841,9 +4102,13 @@ function escapeHtml(value) {
 }
 
 
-function escapeAttr(value) {
+function escapeAttr(
+  value
+) {
 
-  return escapeHtml(value);
+  return escapeHtml(
+    value
+  );
 
 }
 
@@ -2854,6 +4119,7 @@ function escapeAttr(value) {
 
 let toastTimer = null;
 
+
 function toast(
   message,
   type = ""
@@ -2861,6 +4127,11 @@ function toast(
 
   const element =
     $("#toast");
+
+
+  if (!element) {
+    return;
+  }
 
 
   element.textContent =
@@ -2892,14 +4163,15 @@ function toast(
 
 /* =========================================================
    GLOBAL FUNCTIONS
-   Needed by inline product buttons.
 ========================================================= */
 
 window.editProduct =
   editProduct;
 
+
 window.duplicateProduct =
   duplicateProduct;
+
 
 window.deleteProduct =
   deleteProduct;
