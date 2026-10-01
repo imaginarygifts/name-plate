@@ -1,42 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>Imaginary Gifts - Admin</title>
 
-  <link rel="stylesheet" href="/admin/admin.css">
+  <link
+    rel="stylesheet"
+    href="/admin/admin.css"
+  >
+
 </head>
 
+
 <body>
+
 
   <!-- =====================================================
        LOGIN / REGISTER
   ====================================================== -->
 
-  <div id="authScreen" class="auth-screen">
+  <div
+    id="authScreen"
+    class="auth-screen"
+  >
 
     <div class="auth-card">
 
+
+      <!-- BRAND -->
+
       <div class="brand">
-        <div class="brand-icon">IG</div>
-        <div>
-          <h1>Imaginary Gifts</h1>
-          <p>Admin Panel</p>
+
+        <div class="brand-icon">
+          IG
         </div>
+
+        <div>
+
+          <h1>
+            Imaginary Gifts
+          </h1>
+
+          <p>
+            Admin Panel
+          </p>
+
+        </div>
+
       </div>
 
-      <!-- LOGIN -->
+
+      <!-- =================================================
+           LOGIN
+      ================================================== -->
 
       <div id="loginBox">
 
-        <h2>Welcome Back</h2>
-        <p class="muted">Login to manage your products.</p>
+        <h2>
+          Welcome Back
+        </h2>
+
+        <p class="muted">
+          Login to manage your products.
+        </p>
+
 
         <form id="loginForm">
 
-          <label>Email</label>
+
+          <label for="loginEmail">
+            Email
+          </label>
+
           <input
             type="email"
             id="loginEmail"
@@ -45,7 +88,11 @@
             required
           >
 
-          <label>Password</label>
+
+          <label for="loginPassword">
+            Password
+          </label>
+
           <input
             type="password"
             id="loginPassword"
@@ -54,11 +101,17 @@
             required
           >
 
-          <button type="submit" class="primary-btn">
+
+          <button
+            type="submit"
+            class="primary-btn"
+          >
             Login
           </button>
 
+
         </form>
+
 
         <button
           type="button"
@@ -68,43 +121,97 @@
           New User
         </button>
 
-        <div id="loginMessage" class="message"></div>
+
+        <div
+          id="loginMessage"
+          class="message"
+        ></div>
 
       </div>
 
 
-      <!-- REGISTER -->
+      <!-- =================================================
+           REGISTER
+      ================================================== -->
 
-      <div id="registerBox" class="hidden">
+      <div
+        id="registerBox"
+        class="hidden"
+      >
 
-        <h2>Create Account</h2>
+        <h2>
+          Create Admin Account
+        </h2>
+
         <p class="muted">
-          Create a new admin account.
+          Only authorized users can create a new admin account.
         </p>
+
 
         <form id="registerForm">
 
-          <label>Email</label>
+
+          <!-- EMAIL -->
+
+          <label for="registerEmail">
+            Email
+          </label>
+
           <input
             type="email"
             id="registerEmail"
-            placeholder="Enter email"
+            placeholder="Enter admin email"
+            autocomplete="email"
             required
           >
 
-          <label>Password</label>
+
+          <!-- PASSWORD -->
+
+          <label for="registerPassword">
+            Password
+          </label>
+
           <input
             type="password"
             id="registerPassword"
             placeholder="Create password"
+            autocomplete="new-password"
             required
           >
 
-          <button type="submit" class="primary-btn">
-            Create Account
+
+          <!-- ADMIN REGISTRATION KEY -->
+
+          <label for="registerKey">
+            Admin Registration Key
+          </label>
+
+          <input
+            type="password"
+            id="registerKey"
+            placeholder="Enter registration key"
+            autocomplete="off"
+            required
+          >
+
+          <p class="field-help">
+            Enter the private admin registration key to create a new admin account.
+          </p>
+
+
+          <!-- CREATE -->
+
+          <button
+            type="submit"
+            class="primary-btn"
+          >
+            Create Admin Account
           </button>
 
+
         </form>
+
 
         <button
           type="button"
@@ -114,7 +221,11 @@
           ← Back to Login
         </button>
 
-        <div id="registerMessage" class="message"></div>
+
+        <div
+          id="registerMessage"
+          class="message"
+        ></div>
 
       </div>
 
@@ -123,96 +234,175 @@
   </div>
 
 
+
   <!-- =====================================================
        ADMIN APP
   ====================================================== -->
 
-  <div id="adminApp" class="admin-app hidden">
+  <div
+    id="adminApp"
+    class="admin-app hidden"
+  >
 
-    <!-- SIDEBAR -->
+
+    <!-- =================================================
+         SIDEBAR
+    ================================================== -->
 
     <aside class="sidebar">
 
+
       <div class="sidebar-brand">
 
-        <div class="brand-icon">IG</div>
+        <div class="brand-icon">
+          IG
+        </div>
 
         <div>
-          <strong>Imaginary Gifts</strong>
-          <small>Admin Panel</small>
+
+          <strong>
+            Imaginary Gifts
+          </strong>
+
+          <small>
+            Admin Panel
+          </small>
+
         </div>
 
       </div>
 
 
+      <!-- NAVIGATION -->
+
       <nav>
+
 
         <button
           class="nav-btn active"
           data-section="productsSection"
+          type="button"
         >
-          <span>📦</span>
+
+          <span>
+            📦
+          </span>
+
           Products
+
         </button>
+
 
         <button
           class="nav-btn"
           data-section="categoriesSection"
+          type="button"
         >
-          <span>🏷️</span>
+
+          <span>
+            🏷️
+          </span>
+
           Categories
+
         </button>
+
 
       </nav>
 
 
+      <!-- SIDEBAR BOTTOM -->
+
       <div class="sidebar-bottom">
 
-        <div class="admin-email" id="adminEmail"></div>
 
-        <button id="logoutBtn" class="logout-btn">
+        <div
+          class="admin-email"
+          id="adminEmail"
+        ></div>
+
+
+        <button
+          id="logoutBtn"
+          class="logout-btn"
+          type="button"
+        >
           Logout
         </button>
 
+
       </div>
+
 
     </aside>
 
 
-    <!-- MAIN -->
+
+    <!-- =================================================
+         MAIN CONTENT
+    ================================================== -->
 
     <main class="main-content">
 
+
       <!-- =================================================
-           PRODUCTS
+           PRODUCTS SECTION
       ================================================== -->
 
-      <section id="productsSection" class="admin-section active">
+      <section
+        id="productsSection"
+        class="admin-section active"
+      >
+
+
+        <!-- PAGE HEADER -->
 
         <div class="page-header">
 
+
           <div>
-            <h1>Products</h1>
-            <p>Manage your catalogue products.</p>
+
+            <h1>
+              Products
+            </h1>
+
+            <p>
+              Manage your catalogue products.
+            </p>
+
           </div>
+
 
           <button
             id="newProductBtn"
             class="primary-btn"
+            type="button"
           >
             + Add Product
           </button>
 
+
         </div>
 
 
-        <!-- PRODUCT EDITOR -->
 
-        <div id="productEditor" class="editor-card hidden">
+        <!-- =================================================
+             PRODUCT EDITOR
+        ================================================== -->
+
+        <div
+          id="productEditor"
+          class="editor-card hidden"
+        >
+
+
+          <!-- EDITOR HEADER -->
 
           <div class="editor-header">
 
+
             <div>
+
               <h2 id="editorTitle">
                 Add Product
               </h2>
@@ -220,20 +410,28 @@
               <p class="muted">
                 Create or edit product details.
               </p>
+
             </div>
+
 
             <button
               id="closeEditorBtn"
               class="icon-btn"
               type="button"
+              title="Close"
             >
               ✕
             </button>
 
+
           </div>
 
 
+
+          <!-- PRODUCT FORM -->
+
           <form id="productForm">
+
 
             <input
               type="hidden"
@@ -241,17 +439,29 @@
             >
 
 
-            <!-- BASIC DETAILS -->
+
+            <!-- =================================================
+                 BASIC DETAILS
+            ================================================== -->
 
             <div class="form-section">
 
-              <h3>Basic Details</h3>
+
+              <h3>
+                Basic Details
+              </h3>
+
 
               <div class="form-grid">
 
+
+                <!-- PRODUCT NAME -->
+
                 <div class="field full">
 
-                  <label>Product Name *</label>
+                  <label for="productName">
+                    Product Name *
+                  </label>
 
                   <input
                     type="text"
@@ -263,13 +473,21 @@
                 </div>
 
 
+
+                <!-- BASE PRICE -->
+
                 <div class="field">
 
-                  <label>Base Price *</label>
+                  <label for="productPrice">
+                    Base Price *
+                  </label>
+
 
                   <div class="price-input">
 
-                    <span>₹</span>
+                    <span>
+                      ₹
+                    </span>
 
                     <input
                       type="number"
@@ -285,19 +503,29 @@
                 </div>
 
 
+
+                <!-- CATEGORY -->
+
                 <div class="field">
 
-                  <label>Category</label>
+                  <label for="productCategory">
+                    Category
+                  </label>
+
 
                   <div class="inline-field">
 
-                    <select id="productCategory">
+
+                    <select
+                      id="productCategory"
+                    >
 
                       <option value="">
                         Select Category
                       </option>
 
                     </select>
+
 
                     <button
                       type="button"
@@ -307,14 +535,20 @@
                       + Create
                     </button>
 
+
                   </div>
 
                 </div>
 
 
+
+                <!-- DESCRIPTION -->
+
                 <div class="field full">
 
-                  <label>Description</label>
+                  <label for="productDescription">
+                    Description
+                  </label>
 
                   <textarea
                     id="productDescription"
@@ -324,23 +558,35 @@
 
                 </div>
 
+
               </div>
 
             </div>
 
 
-            <!-- COLOURS -->
+
+            <!-- =================================================
+                 COLOURS
+            ================================================== -->
 
             <div class="form-section">
 
+
               <div class="section-heading">
 
+
                 <div>
-                  <h3>Colours</h3>
+
+                  <h3>
+                    Colours
+                  </h3>
+
                   <p class="muted">
                     Add colour options and additional pricing.
                   </p>
+
                 </div>
+
 
                 <button
                   type="button"
@@ -350,28 +596,42 @@
                   + Add Colour
                 </button>
 
+
               </div>
+
 
               <div
                 id="coloursContainer"
                 class="variant-list"
               ></div>
 
+
             </div>
 
 
-            <!-- SIZES -->
+
+            <!-- =================================================
+                 SIZES
+            ================================================== -->
 
             <div class="form-section">
 
+
               <div class="section-heading">
 
+
                 <div>
-                  <h3>Sizes</h3>
+
+                  <h3>
+                    Sizes
+                  </h3>
+
                   <p class="muted">
                     Add size options and additional pricing.
                   </p>
+
                 </div>
+
 
                 <button
                   type="button"
@@ -381,30 +641,43 @@
                   + Add Size
                 </button>
 
+
               </div>
+
 
               <div
                 id="sizesContainer"
                 class="variant-list"
               ></div>
 
+
             </div>
 
 
-            <!-- CUSTOM VARIANTS -->
+
+            <!-- =================================================
+                 CUSTOM VARIANTS
+            ================================================== -->
 
             <div class="form-section">
 
+
               <div class="section-heading">
 
+
                 <div>
-                  <h3>Custom Variants</h3>
+
+                  <h3>
+                    Custom Variants
+                  </h3>
 
                   <p class="muted">
                     Create options such as Design, Shape,
                     Brand, Thickness, Material, etc.
                   </p>
+
                 </div>
+
 
                 <button
                   type="button"
@@ -414,37 +687,54 @@
                   + Add Variant
                 </button>
 
+
               </div>
+
 
               <div
                 id="customVariantsContainer"
                 class="custom-variants"
               ></div>
 
+
             </div>
 
 
-            <!-- IMAGES -->
+
+            <!-- =================================================
+                 PRODUCT IMAGES
+            ================================================== -->
 
             <div class="form-section">
 
+
               <div class="section-heading">
 
+
                 <div>
-                  <h3>Product Images</h3>
+
+                  <h3>
+                    Product Images
+                  </h3>
 
                   <p class="muted">
                     Upload multiple product images.
                   </p>
+
                 </div>
+
 
               </div>
 
+
+
+              <!-- IMAGE UPLOAD -->
 
               <div
                 id="imageDropZone"
                 class="image-drop-zone"
               >
+
 
                 <input
                   type="file"
@@ -454,34 +744,52 @@
                   hidden
                 >
 
+
                 <div class="upload-icon">
                   ⬆
                 </div>
+
 
                 <strong>
                   Click to select images
                 </strong>
 
+
                 <span>
                   You can select multiple images
                 </span>
 
+
               </div>
 
+
+
+              <!-- IMAGE PREVIEWS -->
 
               <div
                 id="imagePreviewContainer"
                 class="image-preview-grid"
               ></div>
 
+
+              <p class="field-help">
+                When editing a product, click ✕ on an existing image to mark it for deletion. The image will be permanently deleted when you click Save Product.
+              </p>
+
+
             </div>
 
 
-            <!-- FRONTEND -->
+
+            <!-- =================================================
+                 FRONTEND VISIBILITY
+            ================================================== -->
 
             <div class="form-section">
 
+
               <label class="checkbox-label">
+
 
                 <input
                   type="checkbox"
@@ -489,22 +797,33 @@
                   checked
                 >
 
+
                 <span>
-                  <strong>Show on Frontend</strong>
+
+                  <strong>
+                    Show on Frontend
+                  </strong>
 
                   <small>
                     Make this product visible on the customer catalogue.
                   </small>
+
                 </span>
 
+
               </label>
+
 
             </div>
 
 
-            <!-- ACTIONS -->
+
+            <!-- =================================================
+                 PRODUCT ACTIONS
+            ================================================== -->
 
             <div class="editor-actions">
+
 
               <button
                 type="button"
@@ -514,6 +833,7 @@
                 Cancel
               </button>
 
+
               <button
                 type="submit"
                 class="primary-btn"
@@ -522,53 +842,75 @@
                 Save Product
               </button>
 
+
             </div>
 
+
           </form>
+
 
         </div>
 
 
-        <!-- PRODUCT LIST -->
+
+        <!-- =================================================
+             PRODUCT LIST
+        ================================================== -->
 
         <div
           id="productsListCard"
           class="products-card"
         >
 
+
           <div class="list-header">
 
+
             <div>
-              <h2>All Products</h2>
+
+              <h2>
+                All Products
+              </h2>
+
+
               <span
                 id="productCount"
                 class="count-badge"
               >
                 0
               </span>
+
+
             </div>
+
 
             <button
               id="refreshProductsBtn"
               class="secondary-btn"
+              type="button"
             >
               ↻ Refresh
             </button>
 
+
           </div>
+
 
           <div
             id="productsList"
             class="products-list"
           ></div>
 
+
         </div>
+
 
       </section>
 
 
+
       <!-- =================================================
-           CATEGORIES
+           CATEGORIES SECTION
       ================================================== -->
 
       <section
@@ -576,32 +918,52 @@
         class="admin-section"
       >
 
+
+        <!-- PAGE HEADER -->
+
         <div class="page-header">
 
+
           <div>
-            <h1>Categories</h1>
+
+            <h1>
+              Categories
+            </h1>
 
             <p>
-              Create and manage product categories.
+              Create, delete and reorder product categories.
             </p>
+
           </div>
+
 
           <button
             id="addCategoryPageBtn"
             class="primary-btn"
+            type="button"
           >
             + Add Category
           </button>
 
+
         </div>
 
 
+
+        <!-- CATEGORY CARD -->
+
         <div class="categories-card">
+
 
           <div class="list-header">
 
+
             <div>
-              <h2>All Categories</h2>
+
+              <h2>
+                All Categories
+              </h2>
+
 
               <span
                 id="categoryCount"
@@ -609,34 +971,69 @@
               >
                 0
               </span>
+
+
             </div>
+
 
             <button
               id="refreshCategoriesBtn"
               class="secondary-btn"
+              type="button"
             >
               ↻ Refresh
             </button>
 
+
           </div>
 
+
+
+          <!-- DRAG INFORMATION -->
+
+          <div
+            class="category-order-help"
+            style="
+              padding: 12px 16px;
+              margin: 0 0 10px;
+              border-radius: 10px;
+              background: rgba(255,255,255,.04);
+              color: #a1a1aa;
+              font-size: 13px;
+            "
+          >
+
+            ☰ Drag categories to change their order.
+            The order is automatically saved and will be
+            used by the frontend category filter.
+
+          </div>
+
+
+
+          <!-- CATEGORY LIST -->
 
           <div
             id="categoriesList"
             class="categories-list"
           ></div>
 
+
         </div>
+
 
       </section>
 
+
     </main>
+
 
   </div>
 
 
+
   <!-- =====================================================
-       CATEGORY MODAL
+       CREATE CATEGORY MODAL
   ====================================================== -->
 
   <div
@@ -644,31 +1041,49 @@
     class="modal-overlay hidden"
   >
 
+
     <div class="modal-card">
+
 
       <div class="modal-header">
 
+
         <div>
-          <h2>Create Category</h2>
+
+          <h2>
+            Create Category
+          </h2>
+
           <p class="muted">
             Add a category for your products.
           </p>
+
         </div>
+
 
         <button
           id="closeCategoryModalBtn"
           class="icon-btn"
           type="button"
+          title="Close"
         >
           ✕
         </button>
 
+
       </div>
+
 
 
       <form id="categoryForm">
 
-        <label>Category Name *</label>
+
+        <!-- CATEGORY NAME -->
+
+        <label for="categoryName">
+          Category Name *
+        </label>
+
 
         <input
           type="text"
@@ -678,7 +1093,13 @@
         >
 
 
-        <label>Slug</label>
+
+        <!-- SLUG -->
+
+        <label for="categorySlug">
+          Slug
+        </label>
+
 
         <input
           type="text"
@@ -686,12 +1107,17 @@
           placeholder="name-plates"
         >
 
+
         <p class="field-help">
           Leave blank to generate automatically.
         </p>
 
 
+
+        <!-- ACTIONS -->
+
         <div class="modal-actions">
+
 
           <button
             type="button"
@@ -701,6 +1127,7 @@
             Cancel
           </button>
 
+
           <button
             type="submit"
             class="primary-btn"
@@ -708,22 +1135,28 @@
             Create Category
           </button>
 
+
         </div>
+
 
         <div
           id="categoryMessage"
           class="message"
         ></div>
 
+
       </form>
 
+
     </div>
+
 
   </div>
 
 
+
   <!-- =====================================================
-       UPLOAD PROGRESS MODAL
+       IMAGE UPLOAD PROGRESS MODAL
   ====================================================== -->
 
   <div
@@ -731,17 +1164,26 @@
     class="modal-overlay hidden"
   >
 
-    <div class="modal-card upload-modal">
+
+    <div
+      class="modal-card upload-modal"
+    >
+
 
       <div class="upload-modal-icon">
         ⬆
       </div>
 
-      <h2>Uploading Images</h2>
+
+      <h2>
+        Uploading Images
+      </h2>
+
 
       <p id="uploadStatus">
         Preparing upload...
       </p>
+
 
       <div class="progress-wrapper">
 
@@ -752,26 +1194,34 @@
 
       </div>
 
+
       <div class="progress-info">
+
 
         <strong id="uploadPercent">
           0%
         </strong>
 
+
         <span id="uploadFileNumber">
           0 / 0
         </span>
 
+
       </div>
+
 
       <div
         id="uploadFileName"
         class="upload-file-name"
       ></div>
 
+
     </div>
 
+
   </div>
+
 
 
   <!-- =====================================================
@@ -784,7 +1234,16 @@
   ></div>
 
 
-  <script src="/admin/admin.js"></script>
+
+  <!-- =====================================================
+       JAVASCRIPT
+  ====================================================== -->
+
+  <script
+    src="/admin/admin.js"
+  ></script>
+
 
 </body>
+
 </html>
