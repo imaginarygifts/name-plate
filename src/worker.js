@@ -1197,26 +1197,47 @@ async function api(
       ).trim();
 
 
-    const imageIndex =
+    const imageIndexRaw =
       Number(
-        product.imageIndex || 0
+        product.imageIndex ?? 0
       );
 
+    const imageIndex =
+      Number.isFinite(
+        imageIndexRaw
+      )
+        ? imageIndexRaw
+        : 0;
 
-    const basePrice =
+
+    const basePriceRaw =
       Number(
         product.basePrice ??
         product.price ??
         0
       );
 
+    const basePrice =
+      Number.isFinite(
+        basePriceRaw
+      )
+        ? basePriceRaw
+        : 0;
 
-    const finalPrice =
+
+    const finalPriceRaw =
       Number(
         product.finalPrice ??
         product.price ??
         0
       );
+
+    const finalPrice =
+      Number.isFinite(
+        finalPriceRaw
+      )
+        ? finalPriceRaw
+        : 0;
 
 
     const colour =
@@ -1314,128 +1335,196 @@ async function api(
     }
 
 
-    /*
-      Generate order ID.
-    */
-
-    const orderId =
-      "IG-" +
-      Date.now()
-        .toString(36)
-        .toUpperCase() +
-      "-" +
-      crypto.randomUUID()
-        .slice(
-          0,
-          6
-        )
-        .toUpperCase();
-
-
     const createdAt =
       now();
 
 
+    /* ===================================================
+       SEQUENTIAL ORDER ID
+
+       order_counter.next_number starts at 1000.
+
+       First order:
+       IG-1000
+
+       Then:
+       IG-1001
+       IG-1002
+       IG-1003
+       ...
+
+       The INSERT + UPDATE + SELECT are executed
+       sequentially inside one D1 batch transaction.
+    =================================================== */
+
+    const batchResults =
+      await env.DB.batch([
+
+        /* ---------------------------------------------
+           1. CREATE ORDER USING CURRENT COUNTER
+        --------------------------------------------- */
+
+        env.DB.prepare(`
+          INSERT INTO orders
+          (
+            id,
+
+            customer_name,
+            customer_phone,
+            customer_address,
+            pincode,
+
+            product_id,
+            product_name,
+            product_image,
+            product_description,
+
+            image_url,
+            image_index,
+
+            base_price,
+            final_price,
+
+            variants_json,
+            selections_json,
+            product_data_json,
+
+            product_link,
+
+            colour,
+            size,
+
+            price,
+
+            status,
+            created_at
+          )
+          SELECT
+            'IG-' || next_number,
+
+            ?,
+            ?,
+            ?,
+            ?,
+
+            ?,
+            ?,
+            ?,
+            ?,
+
+            ?,
+            ?,
+
+            ?,
+            ?,
+
+            ?,
+            ?,
+            ?,
+
+            ?,
+
+            ?,
+            ?,
+
+            ?,
+
+            ?,
+            ?
+
+          FROM order_counter
+          WHERE id = 1
+        `)
+          .bind(
+
+            customerName,
+            customerPhone,
+            address,
+            pincode,
+
+            productId,
+            productName,
+            productImage,
+            productDescription,
+
+            imageUrl,
+            imageIndex,
+
+            basePrice,
+            finalPrice,
+
+            JSON.stringify(
+              variants
+            ),
+
+            JSON.stringify(
+              selections
+            ),
+
+            JSON.stringify(
+              productData
+            ),
+
+            productLink,
+
+            colour,
+            size,
+
+            finalPrice,
+
+            "new",
+            createdAt
+
+          ),
+
+        /* ---------------------------------------------
+           2. INCREASE COUNTER
+        --------------------------------------------- */
+
+        env.DB.prepare(`
+          UPDATE order_counter
+          SET
+            next_number =
+              next_number + 1
+          WHERE id = 1
+        `),
+
+        /* ---------------------------------------------
+           3. GET THE ORDER ID WE JUST CREATED
+        --------------------------------------------- */
+
+        env.DB.prepare(`
+          SELECT
+            'IG-' ||
+            (next_number - 1)
+            AS order_id
+          FROM order_counter
+          WHERE id = 1
+        `)
+
+      ]);
+
+
+    const orderId =
+      batchResults?.[2]
+        ?.results?.[0]
+        ?.order_id || "";
+
+
+    if (!orderId) {
+
+      return json(
+        {
+          error:
+            "Could not generate order ID."
+        },
+        500
+      );
+
+    }
+
+
     /*
-      SAVE COMPLETE ORDER
-    */
-
-    await env.DB.prepare(`
-      INSERT INTO orders
-      (
-        id,
-
-        customer_name,
-        customer_phone,
-        customer_address,
-        pincode,
-
-        product_id,
-        product_name,
-        product_image,
-        product_description,
-
-        colour,
-        size,
-
-        price,
-
-        image_url,
-        image_index,
-
-        base_price,
-        final_price,
-
-        variants_json,
-        selections_json,
-        product_data_json,
-
-        product_link,
-
-        status,
-        created_at
-      )
-      VALUES (
-        ?,
-        ?, ?, ?, ?,
-        ?, ?, ?, ?,
-        ?, ?,
-        ?,
-        ?, ?,
-        ?, ?,
-        ?, ?, ?,
-        ?,
-        ?, ?
-      )
-    `)
-      .bind(
-
-        orderId,
-
-        customerName,
-        customerPhone,
-        address,
-        pincode,
-
-        productId,
-        productName,
-        productImage,
-        productDescription,
-
-        colour,
-        size,
-
-        finalPrice,
-
-        imageUrl,
-        imageIndex,
-
-        basePrice,
-        finalPrice,
-
-        JSON.stringify(
-          variants
-        ),
-
-        JSON.stringify(
-          selections
-        ),
-
-        JSON.stringify(
-          productData
-        ),
-
-        productLink,
-
-        "new",
-        createdAt
-
-      )
-      .run();
-
-
-    /*
-      IMPORTANT:
       Return the generated order ID to
       catalogue.js so it can be placed
       in the WhatsApp message.
