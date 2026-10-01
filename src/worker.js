@@ -1104,6 +1104,356 @@ async function api(
 
 
   /* =======================================================
+     PUBLIC - CREATE ORDER
+
+     IMPORTANT:
+     This is BEFORE admin authentication because
+     customers must be able to place orders without
+     being logged into the admin panel.
+  ======================================================= */
+
+  if (
+    path === "/api/orders" &&
+    request.method === "POST"
+  ) {
+
+    const body =
+      await request
+        .json()
+        .catch(
+          () => ({})
+        );
+
+
+    const customer =
+      body.customer || {};
+
+
+    const product =
+      body.product || {};
+
+
+    /* ---------------------------------------------
+       CUSTOMER
+    --------------------------------------------- */
+
+    const customerName =
+      String(
+        customer.name || ""
+      ).trim();
+
+
+    const customerPhone =
+      String(
+        customer.phone || ""
+      ).trim();
+
+
+    const address =
+      String(
+        customer.address || ""
+      ).trim();
+
+
+    const pincode =
+      String(
+        customer.pincode || ""
+      ).trim();
+
+
+    /* ---------------------------------------------
+       PRODUCT
+    --------------------------------------------- */
+
+    const productId =
+      String(
+        product.id || ""
+      ).trim();
+
+
+    const productName =
+      String(
+        product.name || ""
+      ).trim();
+
+
+    const productImage =
+      String(
+        product.image || ""
+      ).trim();
+
+
+    const productDescription =
+      String(
+        product.description || ""
+      );
+
+
+    const imageUrl =
+      String(
+        product.imageUrl ||
+        product.image ||
+        ""
+      ).trim();
+
+
+    const imageIndex =
+      Number(
+        product.imageIndex || 0
+      );
+
+
+    const basePrice =
+      Number(
+        product.basePrice ??
+        product.price ??
+        0
+      );
+
+
+    const finalPrice =
+      Number(
+        product.finalPrice ??
+        product.price ??
+        0
+      );
+
+
+    const colour =
+      String(
+        product.colour || ""
+      ).trim();
+
+
+    const size =
+      String(
+        product.size || ""
+      ).trim();
+
+
+    const variants =
+      product.variants &&
+      typeof product.variants === "object"
+        ? product.variants
+        : {};
+
+
+    const selections =
+      product.selections &&
+      typeof product.selections === "object"
+        ? product.selections
+        : {};
+
+
+    const productData =
+      product.productData &&
+      typeof product.productData === "object"
+        ? product.productData
+        : {};
+
+
+    const productLink =
+      String(
+        product.productLink || ""
+      ).trim();
+
+
+    if (
+      !customerName ||
+      !customerPhone ||
+      !address ||
+      !pincode ||
+      !productId ||
+      !productName
+    ) {
+
+      return json(
+        {
+          error:
+            "Required order details are missing."
+        },
+        400
+      );
+
+    }
+
+
+    /*
+      Make sure the product still exists.
+
+      We only verify the ID here.
+      We keep the submitted product snapshot
+      so the order preserves what customer saw.
+    */
+
+    const realProduct =
+      await env.DB.prepare(`
+        SELECT
+          id,
+          name
+        FROM products
+        WHERE id = ?
+          AND active = 1
+      `)
+        .bind(
+          productId
+        )
+        .first();
+
+
+    if (!realProduct) {
+
+      return json(
+        {
+          error:
+            "Product is no longer available."
+        },
+        400
+      );
+
+    }
+
+
+    /*
+      Generate order ID.
+    */
+
+    const orderId =
+      "IG-" +
+      Date.now()
+        .toString(36)
+        .toUpperCase() +
+      "-" +
+      crypto.randomUUID()
+        .slice(
+          0,
+          6
+        )
+        .toUpperCase();
+
+
+    const createdAt =
+      now();
+
+
+    /*
+      SAVE COMPLETE ORDER
+    */
+
+    await env.DB.prepare(`
+      INSERT INTO orders
+      (
+        id,
+
+        customer_name,
+        customer_phone,
+        customer_address,
+        pincode,
+
+        product_id,
+        product_name,
+        product_image,
+        product_description,
+
+        colour,
+        size,
+
+        price,
+
+        image_url,
+        image_index,
+
+        base_price,
+        final_price,
+
+        variants_json,
+        selections_json,
+        product_data_json,
+
+        product_link,
+
+        status,
+        created_at
+      )
+      VALUES (
+        ?,
+        ?, ?, ?, ?,
+        ?, ?, ?, ?,
+        ?, ?,
+        ?,
+        ?, ?,
+        ?, ?,
+        ?, ?, ?,
+        ?,
+        ?, ?
+      )
+    `)
+      .bind(
+
+        orderId,
+
+        customerName,
+        customerPhone,
+        address,
+        pincode,
+
+        productId,
+        productName,
+        productImage,
+        productDescription,
+
+        colour,
+        size,
+
+        finalPrice,
+
+        imageUrl,
+        imageIndex,
+
+        basePrice,
+        finalPrice,
+
+        JSON.stringify(
+          variants
+        ),
+
+        JSON.stringify(
+          selections
+        ),
+
+        JSON.stringify(
+          productData
+        ),
+
+        productLink,
+
+        "new",
+        createdAt
+
+      )
+      .run();
+
+
+    /*
+      IMPORTANT:
+      Return the generated order ID to
+      catalogue.js so it can be placed
+      in the WhatsApp message.
+    */
+
+    return json(
+      {
+        ok: true,
+
+        orderId
+      },
+      201
+    );
+
+  }
+
+
+  /* =======================================================
      EVERYTHING BELOW HERE REQUIRES ADMIN LOGIN
   ======================================================= */
 
@@ -2343,220 +2693,6 @@ async function api(
 
 
   /* =======================================================
-     ORDERS - CREATE
-  ======================================================= */
-
-  if (
-    path === "/api/orders" &&
-    request.method === "POST"
-  ) {
-
-    const body =
-      await request
-        .json()
-        .catch(
-          () => ({})
-        );
-
-
-    const customer =
-      body.customer || {};
-
-
-    const product =
-      body.product || {};
-
-
-    const customerName =
-      String(
-        customer.name || ""
-      ).trim();
-
-
-    const customerPhone =
-      String(
-        customer.phone || ""
-      ).trim();
-
-
-    const address =
-      String(
-        customer.address || ""
-      ).trim();
-
-
-    const pincode =
-      String(
-        customer.pincode || ""
-      ).trim();
-
-
-    const productId =
-      String(
-        product.id || ""
-      ).trim();
-
-
-    const productName =
-      String(
-        product.name || ""
-      ).trim();
-
-
-    const productImage =
-      String(
-        product.image || ""
-      ).trim();
-
-
-    const colour =
-      String(
-        product.colour || ""
-      ).trim();
-
-
-    const size =
-      String(
-        product.size || ""
-      ).trim();
-
-
-    const price =
-      Number(
-        product.price || 0
-      );
-
-
-    if (
-      !customerName ||
-      !customerPhone ||
-      !address ||
-      !pincode ||
-      !productId ||
-      !productName
-    ) {
-
-      return json(
-        {
-          error:
-            "Required order details are missing."
-        },
-        400
-      );
-
-    }
-
-
-    const realProduct =
-      await env.DB.prepare(`
-        SELECT
-          id,
-          name
-        FROM products
-        WHERE id = ?
-          AND active = 1
-      `)
-        .bind(
-          productId
-        )
-        .first();
-
-
-    if (!realProduct) {
-
-      return json(
-        {
-          error:
-            "Product is no longer available."
-        },
-        400
-      );
-
-    }
-
-
-    const orderId =
-      "IG-" +
-      Date.now()
-        .toString(36)
-        .toUpperCase() +
-      "-" +
-      crypto.randomUUID()
-        .slice(
-          0,
-          6
-        )
-        .toUpperCase();
-
-
-    const createdAt =
-      now();
-
-
-    await env.DB.prepare(`
-      INSERT INTO orders
-      (
-        id,
-        customer_name,
-        customer_phone,
-        customer_address,
-        pincode,
-        product_id,
-        product_name,
-        product_image,
-        colour,
-        size,
-        price,
-        status,
-        created_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-      .bind(
-
-        orderId,
-
-        customerName,
-
-        customerPhone,
-
-        address,
-
-        pincode,
-
-        productId,
-
-        productName,
-
-        productImage,
-
-        colour,
-
-        size,
-
-        price,
-
-        "new",
-
-        createdAt
-
-      )
-      .run();
-
-
-    return json(
-      {
-        ok: true,
-
-        orderId
-      },
-      201
-    );
-
-  }
-
-
-  /* =======================================================
      ADMIN - ORDERS
   ======================================================= */
 
@@ -2573,8 +2709,44 @@ async function api(
       `).all();
 
 
+    /*
+      Keep all original database fields exactly
+      as they were.
+
+      Additionally expose parsed JSON fields
+      so the Admin panel can use them easily.
+    */
+
+    const orders =
+      rows.results.map(
+        row => ({
+
+          ...row,
+
+          variants:
+            parseJSON(
+              row.variants_json,
+              {}
+            ),
+
+          selections:
+            parseJSON(
+              row.selections_json,
+              {}
+            ),
+
+          product_data:
+            parseJSON(
+              row.product_data_json,
+              {}
+            )
+
+        })
+      );
+
+
     return json(
-      rows.results
+      orders
     );
 
   }
