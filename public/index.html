@@ -1,770 +1,298 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<title>Imaginary Gifts Admin</title>
+  <meta charset="UTF-8">
 
-<link rel="stylesheet" href="/admin/admin.css">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="theme-color"
+    content="#09090b"
+  >
+
+  <title>Imaginary Gifts</title>
+
+  <link
+    rel="stylesheet"
+    href="/css/catalogue.css"
+  >
+
 </head>
+
 
 <body>
 
-<header class="admin-header">
+  <!-- =====================================================
+       STICKY TOP BAR
+  ====================================================== -->
 
-    <div>
-        <h1>Imaginary Gifts</h1>
-        <p>Product Administration</p>
+  <header class="topbar">
+
+    <div class="topbar-inner">
+
+      <a
+        href="/"
+        class="brand-link"
+        aria-label="Imaginary Gifts"
+      >
+
+        <div class="brand-logo">
+          IG
+        </div>
+
+        <div class="brand-text">
+          <strong>Imaginary Gifts</strong>
+          <span>Personalized Gifts</span>
+        </div>
+
+      </a>
+
     </div>
 
-    <div class="header-actions">
-
-        <span id="adminEmail" class="admin-email"></span>
-
-        <button
-            id="logoutButton"
-            class="secondary-btn"
-        >
-            Logout
-        </button>
-
-    </div>
-
-</header>
+  </header>
 
 
-<main class="admin-layout">
+  <!-- =====================================================
+       MAIN
+  ====================================================== -->
 
+  <main class="catalogue">
 
-<!-- ==================================================
-     LOGIN
-================================================== -->
+    <!-- CATEGORY FILTER -->
 
-<section id="loginBox" class="auth-card">
+    <section class="category-filter-section">
 
-    <h2>Admin Login</h2>
-
-    <p class="muted">
-        Login to manage your products.
-    </p>
-
-    <form id="loginForm">
-
-        <div class="field">
-
-            <label>Email</label>
-
-            <input
-                id="loginEmail"
-                type="email"
-                placeholder="admin@example.com"
-                required
-            >
-
-        </div>
-
-
-        <div class="field">
-
-            <label>Password</label>
-
-            <input
-                id="loginPassword"
-                type="password"
-                placeholder="Password"
-                required
-            >
-
-        </div>
-
+      <div
+        id="categoryPills"
+        class="category-pills"
+      >
 
         <button
-            type="submit"
-            class="gradient-btn full-btn"
+          type="button"
+          class="category-pill active"
+          data-category-id=""
         >
-            Login
+          All
         </button>
 
-    </form>
+      </div>
+
+    </section>
 
 
-    <div id="loginMessage" class="message"></div>
+    <!-- PRODUCTS -->
 
+    <section class="products-section">
 
-    <button
-        id="showRegisterButton"
-        type="button"
-        class="text-btn"
-    >
-        New User
-    </button>
+      <div
+        id="productsContainer"
+        class="products-container"
+      >
 
-</section>
-
-
-
-<!-- ==================================================
-     REGISTER
-================================================== -->
-
-<section
-    id="registerBox"
-    class="auth-card hidden"
->
-
-    <h2>Create Admin User</h2>
-
-    <p class="muted">
-        Create a new admin account.
-    </p>
-
-
-    <form id="registerForm">
-
-        <div class="field">
-
-            <label>Email</label>
-
-            <input
-                id="registerEmail"
-                type="email"
-                placeholder="admin@example.com"
-                required
-            >
-
+        <div class="loading-state">
+          Loading products...
         </div>
 
+      </div>
 
-        <div class="field">
+    </section>
 
-            <label>Password</label>
-
-            <input
-                id="registerPassword"
-                type="password"
-                minlength="8"
-                placeholder="Minimum 8 characters"
-                required
-            >
-
-        </div>
+  </main>
 
 
-        <button
-            type="submit"
-            class="gradient-btn full-btn"
-        >
-            Create User
-        </button>
+  <!-- =====================================================
+       ORDER MODAL
+  ====================================================== -->
 
-    </form>
+  <div
+    id="orderModal"
+    class="modal-overlay hidden"
+  >
 
+    <div class="order-modal">
 
-    <div id="registerMessage" class="message"></div>
-
-
-    <button
-        id="backLoginButton"
-        type="button"
-        class="text-btn"
-    >
-        ← Back to Login
-    </button>
-
-</section>
-
-
-
-<!-- ==================================================
-     ADMIN AREA
-================================================== -->
-
-<section
-    id="adminBox"
-    class="admin-content hidden"
->
-
-
-<!-- ==================================================
-     PRODUCT EDITOR
-================================================== -->
-
-<div class="editor-card">
-
-    <div class="card-title-row">
+      <div class="modal-header">
 
         <div>
 
-            <h2 id="formTitle">
-                Add Product
-            </h2>
+          <h2>
+            Place Order
+          </h2>
 
-            <p class="muted">
-                Create or edit your product.
-            </p>
+          <p>
+            Enter your delivery details.
+          </p>
 
         </div>
 
-
         <button
-            id="newProductButton"
-            type="button"
-            class="secondary-btn"
+          type="button"
+          id="closeOrderModal"
+          class="close-btn"
         >
-            + New Product
+          ×
         </button>
 
-    </div>
+      </div>
 
 
-<form id="productForm">
+      <!-- ORDER SUMMARY -->
+
+      <div
+        id="orderSummary"
+        class="order-summary"
+      >
+      </div>
 
 
-<input
-    id="productId"
-    type="hidden"
->
+      <!-- ORDER FORM -->
 
+      <form id="orderForm">
 
-<!-- ==================================================
-     BASIC PRODUCT
-================================================== -->
+        <div class="form-field">
 
-<div class="section-block">
+          <label for="customerName">
+            Name
+          </label>
 
-    <div class="section-title">
-
-        <h3>Basic Information</h3>
-
-    </div>
-
-
-    <div class="field">
-
-        <label>
-            Product Name *
-        </label>
-
-        <input
-            id="productName"
+          <input
+            id="customerName"
             type="text"
-            placeholder="Acrylic Glossy Name Plate"
+            autocomplete="name"
             required
-        >
+            placeholder="Your full name"
+          >
 
-    </div>
+        </div>
 
 
-    <div class="field">
+        <div class="form-field">
 
-        <label>
-            Base Price (₹) *
-        </label>
+          <label for="customerPhone">
+            Mobile Number
+          </label>
 
-        <input
-            id="productPrice"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="1000"
+          <input
+            id="customerPhone"
+            type="tel"
+            inputmode="numeric"
+            autocomplete="tel"
             required
-        >
-
-    </div>
-
-
-    <div class="field">
-
-        <label>
-            Description
-        </label>
-
-        <textarea
-            id="productDescription"
-            rows="4"
-            placeholder="Product description..."
-        ></textarea>
-
-    </div>
-
-
-    <!-- CATEGORY -->
-
-    <div class="field">
-
-        <label>
-            Category *
-        </label>
-
-
-        <div class="category-select-row">
-
-            <select id="productCategory">
-
-                <option value="">
-                    Select Category
-                </option>
-
-            </select>
-
-
-            <button
-                id="createCategoryButton"
-                type="button"
-                class="secondary-btn"
-            >
-                + Create Category
-            </button>
+            maxlength="10"
+            placeholder="10 digit mobile number"
+          >
 
         </div>
 
-    </div>
 
-
-    <div class="two-column">
-
-        <label class="checkbox-row">
-
-            <input
-                id="productActive"
-                type="checkbox"
-                checked
-            >
-
-            <span>
-                Show on Frontend
-            </span>
-
-        </label>
-
-    </div>
-
-</div>
-
-
-
-<!-- ==================================================
-     COLOURS
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Colours</h3>
-
-            <p class="muted">
-                Colour options with additional price.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div id="colourList"></div>
-
-
-    <button
-        id="addColourButton"
-        type="button"
-        class="secondary-btn add-btn"
-    >
-        + Add Colour
-    </button>
-
-</div>
-
-
-
-<!-- ==================================================
-     SIZES
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Sizes</h3>
-
-            <p class="muted">
-                Size options with additional price.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div id="sizeList"></div>
-
-
-    <button
-        id="addSizeButton"
-        type="button"
-        class="secondary-btn add-btn"
-    >
-        + Add Size
-    </button>
-
-</div>
-
-
-
-<!-- ==================================================
-     CUSTOM VARIANTS
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Custom Variants</h3>
-
-            <p class="muted">
-                Create any type of variant you want.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <div class="variant-help">
-
-        Examples:
-        <b>Design</b>,
-        <b>Shape</b>,
-        <b>Brand</b>,
-        <b>Thickness</b>,
-        <b>Material</b>,
-        <b>Finish</b>,
-        etc.
-
-    </div>
-
-
-    <div id="variantList"></div>
-
-
-    <button
-        id="addVariantButton"
-        type="button"
-        class="gradient-btn add-btn"
-    >
-        + Create Variant
-    </button>
-
-</div>
-
-
-
-<!-- ==================================================
-     IMAGES
-================================================== -->
-
-<div class="section-block">
-
-    <div class="section-title">
-
-        <div>
-
-            <h3>Product Images</h3>
-
-            <p class="muted">
-                Add multiple product images.
-            </p>
-
-        </div>
-
-    </div>
-
-
-    <label class="image-upload-box">
-
-        <input
-            id="productImages"
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-            multiple
-            hidden
-        >
-
-        <span class="upload-icon">
-            +
-        </span>
-
-        <strong>
-            Select Product Images
-        </strong>
-
-        <small>
-            JPG, PNG, WEBP, GIF or AVIF
-        </small>
-
-    </label>
-
-
-    <div
-        id="imagePreview"
-        class="image-preview-grid"
-    ></div>
-
-</div>
-
-
-
-<!-- ==================================================
-     SAVE
-================================================== -->
-
-<div class="form-actions">
-
-    <button
-        id="saveProductButton"
-        type="submit"
-        class="gradient-btn large-btn"
-    >
-        Save Product
-    </button>
-
-
-    <button
-        id="cancelEditButton"
-        type="button"
-        class="secondary-btn large-btn"
-    >
-        Cancel
-    </button>
-
-</div>
-
-
-</form>
-
-</div>
-
-
-
-<!-- ==================================================
-     ALL PRODUCTS
-================================================== -->
-
-<div class="list-card">
-
-    <div class="card-title-row">
-
-        <div>
-
-            <h2>All Products</h2>
-
-            <p class="muted">
-                Edit, duplicate or delete products.
-            </p>
+        <div class="form-field">
+
+          <label for="customerAddress">
+            Address
+          </label>
+
+          <textarea
+            id="customerAddress"
+            rows="3"
+            autocomplete="street-address"
+            required
+            placeholder="Complete delivery address"
+          ></textarea>
 
         </div>
 
 
-        <span
-            id="productCount"
-            class="count-badge"
-        >
-            0
-        </span>
+        <div class="form-field">
 
-    </div>
+          <label for="customerPincode">
+            PIN Code
+          </label>
 
-
-    <div
-        id="productList"
-        class="product-list"
-    ></div>
-
-</div>
-
-
-</section>
-
-</main>
-
-
-
-<!-- ==================================================
-     CATEGORY MODAL
-================================================== -->
-
-<div
-    id="categoryModal"
-    class="modal hidden"
->
-
-    <div class="modal-card small-modal">
-
-        <div class="modal-header">
-
-            <h3>Create Category</h3>
-
-            <button
-                id="closeCategoryModal"
-                class="modal-close"
-            >
-                ×
-            </button>
-
-        </div>
-
-
-        <div class="field">
-
-            <label>
-                Category Name
-            </label>
-
-            <input
-                id="newCategoryName"
-                placeholder="Name Plates"
-            >
+          <input
+            id="customerPincode"
+            type="text"
+            inputmode="numeric"
+            autocomplete="postal-code"
+            required
+            maxlength="6"
+            placeholder="6 digit PIN code"
+          >
 
         </div>
 
 
         <div
-            id="categoryMessage"
-            class="message"
+          id="orderMessage"
+          class="order-message"
         ></div>
 
 
-        <div class="modal-actions">
+        <button
+          type="submit"
+          class="submit-order-btn"
+          id="submitOrderBtn"
+        >
+          Order on WhatsApp
+        </button>
 
-            <button
-                id="cancelCategoryButton"
-                class="secondary-btn"
-                type="button"
-            >
-                Cancel
-            </button>
-
-            <button
-                id="saveCategoryButton"
-                class="gradient-btn"
-                type="button"
-            >
-                Create Category
-            </button>
-
-        </div>
+      </form>
 
     </div>
 
-</div>
+  </div>
 
 
+  <!-- =====================================================
+       STICKY ORDER BUTTON
+  ====================================================== -->
 
-<!-- ==================================================
-     IMAGE UPLOAD PROGRESS
-================================================== -->
+  <div
+    id="stickyOrderBar"
+    class="sticky-order-bar hidden"
+  >
 
-<div
-    id="uploadModal"
-    class="modal hidden"
->
+    <div class="sticky-order-info">
 
-    <div class="modal-card upload-modal">
+      <strong
+        id="stickyProductName"
+      >
+        Product
+      </strong>
 
-        <div class="upload-modal-icon">
-            ↑
-        </div>
-
-
-        <h2>
-            Uploading Images
-        </h2>
-
-
-        <p
-            id="uploadCurrentText"
-            class="muted"
-        >
-            Preparing...
-        </p>
-
-
-        <div class="progress-number">
-
-            <span id="uploadImageNumber">
-                0 / 0
-            </span>
-
-            <strong id="uploadPercent">
-                0%
-            </strong>
-
-        </div>
-
-
-        <div class="progress-track">
-
-            <div
-                id="uploadProgress"
-                class="progress-bar"
-            ></div>
-
-        </div>
-
-
-        <p
-            id="uploadFileName"
-            class="upload-file-name"
-        >
-            Waiting...
-        </p>
-
-
-        <div
-            id="uploadStatus"
-            class="upload-status"
-        ></div>
+      <span
+        id="stickyProductPrice"
+      >
+        ₹0
+      </span>
 
     </div>
 
-</div>
+
+    <button
+      type="button"
+      id="stickyOrderBtn"
+      class="sticky-order-btn"
+    >
+      Order
+    </button>
+
+  </div>
 
 
+  <!-- =====================================================
+       JAVASCRIPT
+  ====================================================== -->
 
-<!-- ==================================================
-     GENERAL LOADING
-================================================== -->
-
-<div
-    id="loadingOverlay"
-    class="loading-overlay hidden"
->
-
-    <div class="loader"></div>
-
-    <strong id="loadingText">
-        Loading...
-    </strong>
-
-</div>
-
-
-
-<div
-    id="toast"
-    class="toast"
-></div>
-
-
-
-<script src="/admin/admin.js"></script>
+  <script
+    src="/js/catalogue.js"
+    defer
+  ></script>
 
 </body>
+
 </html>
