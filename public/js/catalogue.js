@@ -467,50 +467,15 @@ function handleGlobalClick(
 
 
   /* ---------------------------------------------
-     VARIANT
-  --------------------------------------------- */
-
-  const variantButton =
-    event.target.closest(
-      ".variant-option"
-    );
-
-
-  if (variantButton) {
-
-    /*
-      IMPORTANT:
-
-      Ignore popup options here.
-
-      Popup options have:
-      .order-variant-option
-
-      They are handled separately below.
-    */
-
-    if (
-      variantButton.classList.contains(
-        "order-variant-option"
-      )
-    ) {
-
-      return;
-
-    }
-
-
-    handleVariantSelection(
-      variantButton
-    );
-
-    return;
-
-  }
-
-
-  /* ---------------------------------------------
      VARIANT POPUP OPTION
+     
+     IMPORTANT:
+     This MUST come BEFORE the generic
+     .variant-option handler because popup
+     buttons have BOTH classes:
+
+     .variant-option
+     .order-variant-option
   --------------------------------------------- */
 
   const popupOption =
@@ -523,6 +488,27 @@ function handleGlobalClick(
 
     handleOrderVariantSelection(
       popupOption
+    );
+
+    return;
+
+  }
+
+
+  /* ---------------------------------------------
+     NORMAL PRODUCT / DETAIL VARIANT
+  --------------------------------------------- */
+
+  const variantButton =
+    event.target.closest(
+      ".variant-option"
+    );
+
+
+  if (variantButton) {
+
+    handleVariantSelection(
+      variantButton
     );
 
     return;
@@ -1220,9 +1206,11 @@ function renderVariantGroup(
 ) {
 
   const current =
-    state.selectedVariants[
-      product.id
-    ]?.[groupKey] || "";
+    String(
+      state.selectedVariants[
+        product.id
+      ]?.[groupKey] ?? ""
+    );
 
 
   return `
@@ -1242,9 +1230,21 @@ function renderVariantGroup(
           .map(
             option => {
 
+              /*
+                IMPORTANT:
+                Always convert option ID
+                to string.
+
+                This prevents:
+                number 123 !== string "123"
+              */
+
               const optionId =
-                option.id ||
-                option.name;
+                String(
+                  option.id ??
+                  option.name ??
+                  ""
+                );
 
 
               const selected =
@@ -1339,7 +1339,9 @@ function handleVariantSelection(
     button.dataset.variantGroup;
 
   const optionId =
-    button.dataset.optionId;
+    String(
+      button.dataset.optionId || ""
+    );
 
 
   if (
@@ -1578,14 +1580,21 @@ function calculateProductPrice(
     selected.colours
   ) {
 
+    const selectedColourId =
+      String(
+        selected.colours
+      );
+
+
     applyOption(
       colours.find(
         option =>
-          (
-            option.id ||
-            option.name
+          String(
+            option.id ??
+            option.name ??
+            ""
           ) ===
-          selected.colours
+          selectedColourId
       )
     );
 
@@ -1596,14 +1605,21 @@ function calculateProductPrice(
     selected.sizes
   ) {
 
+    const selectedSizeId =
+      String(
+        selected.sizes
+      );
+
+
     applyOption(
       sizes.find(
         option =>
-          (
-            option.id ||
-            option.name
+          String(
+            option.id ??
+            option.name ??
+            ""
           ) ===
-          selected.sizes
+          selectedSizeId
       )
     );
 
@@ -1627,17 +1643,24 @@ function calculateProductPrice(
       }
 
 
+      const selectedCustomId =
+        String(
+          selectedId
+        );
+
+
       const option =
         (
           variant.options ||
           []
         ).find(
           item =>
-            (
-              item.id ||
-              item.name
+            String(
+              item.id ??
+              item.name ??
+              ""
             ) ===
-            selectedId
+            selectedCustomId
         );
 
 
@@ -1686,14 +1709,21 @@ function getSelectedVariantDetails(
     }
 
 
+    const selectedOptionId =
+      String(
+        selectedId
+      );
+
+
     const option =
       options.find(
         item =>
-          (
-            item.id ||
-            item.name
+          String(
+            item.id ??
+            item.name ??
+            ""
           ) ===
-          selectedId
+          selectedOptionId
       );
 
 
@@ -1707,9 +1737,11 @@ function getSelectedVariantDetails(
           option.name || "",
 
         optionId:
-          option.id ||
-          option.name ||
-          "",
+          String(
+            option.id ??
+            option.name ??
+            ""
+          ),
 
         priceType:
           option.priceType ||
@@ -1944,7 +1976,7 @@ function startOrderProcess(
 
   /*
     ======================================================
-    IMPORTANT CHANGE
+    CURRENT WORKING BEHAVIOUR PRESERVED
 
     If ALL variants have already been
     selected on the product card/detail
@@ -2136,7 +2168,29 @@ function openVariantSelectionPopup(
 
             </div>
           `
-          : ""
+          : `
+            <div
+              style="
+                margin-bottom:15px;
+              "
+            >
+              <span
+                id="variantPopupPrice"
+                style="
+                  display:block;
+                  color:#c084fc;
+                  font-size:15px;
+                  font-weight:800;
+                "
+              >
+                ₹${formatMoney(
+                  calculateProductPrice(
+                    product
+                  )
+                )}
+              </span>
+            </div>
+          `
       }
 
 
@@ -2180,15 +2234,25 @@ function openVariantSelectionPopup(
                     .map(
                       option => {
 
+                        /*
+                          IMPORTANT:
+                          Normalize ID to string.
+                        */
+
                         const optionId =
-                          option.id ||
-                          option.name;
+                          String(
+                            option.id ??
+                            option.name ??
+                            ""
+                          );
 
 
                         const isSelected =
-                          selected[
-                            group.key
-                          ] ===
+                          String(
+                            selected[
+                              group.key
+                            ] ?? ""
+                          ) ===
                           optionId;
 
 
@@ -2305,8 +2369,15 @@ function handleOrderVariantSelection(
   const group =
     button.dataset.variantGroup;
 
+  /*
+    ALWAYS store as string.
+    This prevents numeric/string ID mismatch.
+  */
+
   const optionId =
-    button.dataset.optionId;
+    String(
+      button.dataset.optionId || ""
+    );
 
 
   if (
@@ -2338,7 +2409,7 @@ function handleOrderVariantSelection(
 
     DO NOT rebuild popup.
 
-    This keeps the popup scroll position.
+    This keeps popup scroll position.
   */
 
   const popup =
@@ -2399,6 +2470,16 @@ function handleOrderVariantSelection(
         )}`;
 
     }
+
+
+    /*
+      Also update the product/detail/sticky
+      price without rebuilding anything.
+    */
+
+    updatePriceDisplays(
+      productId
+    );
 
   }
 
@@ -2467,6 +2548,49 @@ function continueOrderAfterVariantSelection() {
 
       message.textContent =
         `Please select ${missing.label}.`;
+
+    }
+
+
+    /*
+      Bring the missing group
+      into view if possible.
+    */
+
+    const popup =
+      $("#variantSelectionModal");
+
+
+    if (popup) {
+
+      const groupsInPopup =
+        popup.querySelectorAll(
+          ".variant-group"
+        );
+
+
+      const missingIndex =
+        groups.findIndex(
+          group =>
+            group.key ===
+            missing.key
+        );
+
+
+      if (
+        groupsInPopup[
+          missingIndex
+        ]
+      ) {
+
+        groupsInPopup[
+          missingIndex
+        ].scrollIntoView({
+          behavior: "smooth",
+          block: "center"
+        });
+
+      }
 
     }
 
@@ -3014,6 +3138,7 @@ function closeSingleProductView() {
 
 
   hideStickyOrder();
+
 
 }
 
