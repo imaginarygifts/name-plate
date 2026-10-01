@@ -19,7 +19,7 @@ const CONFIG = {
   */
 
   whatsappNumber:
-    "919999999999"
+    "919730157585"
 
 };
 
