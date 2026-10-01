@@ -8,19 +8,8 @@
 ========================================================= */
 
 const CONFIG = {
-
-  /*
-    Replace with your WhatsApp number.
-
-    Example:
-    919876543210
-
-    No +, spaces or hyphens.
-  */
-
   whatsappNumber:
     "919730157585"
-
 };
 
 
@@ -3972,16 +3961,9 @@ ${data.pincode}
 
 📦 *PRODUCT DETAILS*
 
-Product:
+Product Name:
 ${data.product.name}
 
-Product ID:
-${data.product.id}
-
-Base Price:
-₹${formatMoney(
-    data.basePrice
-  )}
 
 Final Price:
 ₹${formatMoney(
@@ -3993,12 +3975,6 @@ Final Price:
 🎨 *SELECTED OPTIONS*
 
 ${variantText}
-
-━━━━━━━━━━━━━━━━━━
-
-🖼️ *PRODUCT IMAGE*
-
-https://catalogue.imaginarygifts.workers.dev${data.clickedImage || "Not available"}
 
 ━━━━━━━━━━━━━━━━━━
 
