@@ -3,17 +3,11 @@
    ADMIN ORDERS
 ========================================================= */
 
-
 const state = {
-
     orders: [],
-
     selected: new Set(),
-
     expanded: new Set(),
-
     editingId: null
-
 };
 
 
@@ -22,135 +16,75 @@ const state = {
 ========================================================= */
 
 const ordersList =
-    document.getElementById(
-        "ordersList"
-    );
-
+    document.getElementById("ordersList");
 
 const orderCount =
-    document.getElementById(
-        "orderCount"
-    );
-
+    document.getElementById("orderCount");
 
 const selectedCount =
-    document.getElementById(
-        "selectedCount"
-    );
-
+    document.getElementById("selectedCount");
 
 const selectAll =
-    document.getElementById(
-        "selectAll"
-    );
-
+    document.getElementById("selectAll");
 
 const orderFilter =
-    document.getElementById(
-        "orderFilter"
-    );
-
+    document.getElementById("orderFilter");
 
 const paymentFilter =
-    document.getElementById(
-        "paymentFilter"
-    );
-
+    document.getElementById("paymentFilter");
 
 const bulkOrderStatus =
-    document.getElementById(
-        "bulkOrderStatus"
-    );
-
+    document.getElementById("bulkOrderStatus");
 
 const bulkPaymentStatus =
-    document.getElementById(
-        "bulkPaymentStatus"
-    );
-
+    document.getElementById("bulkPaymentStatus");
 
 const editModal =
-    document.getElementById(
-        "editModal"
-    );
-
+    document.getElementById("editModal");
 
 const editForm =
-    document.getElementById(
-        "editForm"
-    );
-
+    document.getElementById("editForm");
 
 const toast =
-    document.getElementById(
-        "toast"
-    );
+    document.getElementById("toast");
 
 
 /* =========================================================
-   STATUS LABEL
+   STATUS LABELS
 ========================================================= */
 
-function orderStatusLabel(
-    status
-) {
+function orderStatusLabel(status) {
 
     const map = {
-
-        pending:
-            "Pending",
-
-        confirmed:
-            "Confirmed",
-
-        in_progress:
-            "In Progress",
-
-        complete:
-            "Complete",
-
-        delivered:
-            "Delivered",
-
-        cancelled:
-            "Cancelled"
-
+        pending: "Pending",
+        confirmed: "Confirmed",
+        in_progress: "In Progress",
+        complete: "Complete",
+        delivered: "Delivered",
+        cancelled: "Cancelled"
     };
-
 
     return (
         map[status] ||
         status ||
         "Pending"
     );
-
 }
 
 
-function paymentStatusLabel(
-    status
-) {
+function paymentStatusLabel(status) {
 
     const map = {
-
-        pending:
-            "Pending",
-
-        paid:
-            "Paid",
-
-        refund:
-            "Refund"
-
+        pending: "Pending",
+        paid: "Paid",
+        refund: "Refund"
     };
-
 
     return (
         map[status] ||
         status ||
         "Pending"
     );
-
 }
 
 
@@ -160,31 +94,12 @@ function paymentStatusLabel(
 
 function esc(value) {
 
-    return String(
-        value ??
-        ""
-    )
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
-
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
@@ -197,15 +112,12 @@ function money(value) {
     const number =
         Number(value || 0);
 
-
     return number.toLocaleString(
         "en-IN",
         {
-            maximumFractionDigits:
-                2
+            maximumFractionDigits: 2
         }
     );
-
 }
 
 
@@ -213,14 +125,11 @@ function money(value) {
    DATE
 ========================================================= */
 
-function formatDate(
-    timestamp
-) {
+function formatDate(timestamp) {
 
     if (!timestamp) {
         return "";
     }
-
 
     try {
 
@@ -242,7 +151,6 @@ function formatDate(
         return "";
 
     }
-
 }
 
 
@@ -252,44 +160,30 @@ function formatDate(
 
 let toastTimer;
 
-
 function showToast(
     message,
     error = false
 ) {
 
-    clearTimeout(
-        toastTimer
-    );
-
+    clearTimeout(toastTimer);
 
     toast.textContent =
         message;
-
 
     toast.style.borderColor =
         error
             ? "rgba(255,82,99,.4)"
             : "rgba(255,255,255,.09)";
 
-
-    toast.classList.add(
-        "show"
-    );
-
+    toast.classList.add("show");
 
     toastTimer =
         setTimeout(
             () => {
-
-                toast.classList.remove(
-                    "show"
-                );
-
+                toast.classList.remove("show");
             },
             2600
         );
-
 }
 
 
@@ -306,20 +200,16 @@ async function api(
         await fetch(
             url,
             {
-                credentials:
-                    "include",
+                credentials: "include",
 
                 ...options,
 
                 headers: {
-
                     "Content-Type":
                         "application/json",
 
                     ...(options.headers || {})
-
                 }
-
             }
         );
 
@@ -327,9 +217,7 @@ async function api(
     const data =
         await response
             .json()
-            .catch(
-                () => ({})
-            );
+            .catch(() => ({}));
 
 
     if (
@@ -342,7 +230,6 @@ async function api(
         throw new Error(
             "Admin authentication required."
         );
-
     }
 
 
@@ -352,12 +239,10 @@ async function api(
             data.error ||
             "Request failed."
         );
-
     }
 
 
     return data;
-
 }
 
 
@@ -396,12 +281,6 @@ async function loadOrders() {
                 : [];
 
 
-        /*
-          Convert old status values if
-          there are orders created before
-          the new status system.
-        */
-
         state.orders =
             state.orders.map(
                 normalizeOrder
@@ -413,9 +292,7 @@ async function loadOrders() {
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
 
         ordersList.innerHTML = `
@@ -440,9 +317,7 @@ async function loadOrders() {
             </div>
 
         `;
-
     }
-
 }
 
 
@@ -450,9 +325,7 @@ async function loadOrders() {
    NORMALIZE ORDER
 ========================================================= */
 
-function normalizeOrder(
-    order
-) {
+function normalizeOrder(order) {
 
     const copy = {
         ...order
@@ -460,43 +333,33 @@ function normalizeOrder(
 
 
     /*
-      Old Worker used:
-      new / processing / shipped
-
-      Convert them visually to
-      the new status names.
-    */
+     * Old status names
+     */
 
     if (
-        copy.status ===
-        "new"
+        copy.status === "new"
     ) {
 
         copy.status =
             "pending";
-
     }
 
 
     if (
-        copy.status ===
-        "processing"
+        copy.status === "processing"
     ) {
 
         copy.status =
             "in_progress";
-
     }
 
 
     if (
-        copy.status ===
-        "shipped"
+        copy.status === "shipped"
     ) {
 
         copy.status =
             "complete";
-
     }
 
 
@@ -506,27 +369,84 @@ function normalizeOrder(
 
         copy.payment_status =
             "pending";
-
     }
 
 
+    /*
+     * Parse JSON if Worker has not
+     * already parsed it.
+     */
+
     copy.variants =
-        copy.variants ||
-        {};
+        parseObject(
+            copy.variants,
+            copy.variants_json
+        );
 
 
     copy.selections =
-        copy.selections ||
-        {};
+        parseObject(
+            copy.selections,
+            copy.selections_json
+        );
 
 
     copy.product_data =
-        copy.product_data ||
-        {};
+        parseObject(
+            copy.product_data,
+            copy.product_data_json
+        );
 
 
     return copy;
+}
 
+
+/* =========================================================
+   PARSE OBJECT
+========================================================= */
+
+function parseObject(
+    value,
+    fallback
+) {
+
+    if (
+        value &&
+        typeof value === "object"
+    ) {
+
+        return value;
+    }
+
+
+    if (
+        typeof fallback === "string" &&
+        fallback.trim()
+    ) {
+
+        try {
+
+            const parsed =
+                JSON.parse(fallback);
+
+            if (
+                parsed &&
+                typeof parsed === "object"
+            ) {
+
+                return parsed;
+            }
+
+        } catch {
+
+            /* ignore */
+
+        }
+    }
+
+
+    return {};
 }
 
 
@@ -538,7 +458,6 @@ function getFilteredOrders() {
 
     const orderStatus =
         orderFilter.value;
-
 
     const paymentStatus =
         paymentFilter.value;
@@ -563,15 +482,13 @@ function getFilteredOrders() {
                 orderMatch &&
                 paymentMatch
             );
-
         }
     );
-
 }
 
 
 /* =========================================================
-   RENDER
+   RENDER ALL ORDERS
 ========================================================= */
 
 function renderOrders() {
@@ -606,41 +523,30 @@ function renderOrders() {
         `;
 
         return;
-
     }
 
 
     ordersList.innerHTML =
         orders
-            .map(
-                renderOrderCard
-            )
+            .map(renderOrderCard)
             .join("");
 
 
     bindOrderEvents();
-
 }
 
 
 /* =========================================================
-   RENDER ORDER CARD
+   ORDER CARD
 ========================================================= */
 
-function renderOrderCard(
-    order
-) {
+function renderOrderCard(order) {
 
     const isExpanded =
-        state.expanded.has(
-            order.id
-        );
-
+        state.expanded.has(order.id);
 
     const isSelected =
-        state.selected.has(
-            order.id
-        );
+        state.selected.has(order.id);
 
 
     const image =
@@ -667,17 +573,18 @@ function renderOrderCard(
                     ? "expanded"
                     : ""
             }"
-            data-order-id="${esc(
-                order.id
-            )}"
+            data-order-id="${esc(order.id)}"
         >
 
+
+            <!-- ================================
+                 COMPACT HEADER
+            ================================= -->
 
             <div
                 class="order-main"
                 data-action="toggle"
             >
-
 
                 <div class="order-top">
 
@@ -690,9 +597,7 @@ function renderOrderCard(
                         <input
                             type="checkbox"
                             class="order-checkbox"
-                            data-id="${esc(
-                                order.id
-                            )}"
+                            data-id="${esc(order.id)}"
                             ${
                                 isSelected
                                     ? "checked"
@@ -705,9 +610,7 @@ function renderOrderCard(
 
                     <div class="order-id">
 
-                        ${esc(
-                            order.id
-                        )}
+                        ${esc(order.id)}
 
                     </div>
 
@@ -722,7 +625,6 @@ function renderOrderCard(
 
                     </div>
 
-
                 </div>
 
 
@@ -736,9 +638,7 @@ function renderOrderCard(
 
                                 <img
                                     class="product-image"
-                                    src="${esc(
-                                        image
-                                    )}"
+                                    src="${esc(image)}"
                                     alt="${esc(
                                         order.product_name
                                     )}"
@@ -750,7 +650,9 @@ function renderOrderCard(
                             : `
 
                                 <div
-                                    class="product-image-placeholder"
+                                    class="
+                                        product-image-placeholder
+                                    "
                                 >
                                     📦
                                 </div>
@@ -839,19 +741,19 @@ function renderOrderCard(
 
                     </div>
 
-
                 </div>
-
 
             </div>
 
 
-            <!-- =====================================
+            <!-- ================================
                  EXPANDED DETAILS
-            ====================================== -->
+            ================================= -->
 
             <div class="order-details">
 
+
+                <!-- CUSTOMER DETAILS -->
 
                 <div class="detail-section">
 
@@ -870,9 +772,11 @@ function renderOrderCard(
                             </div>
 
                             <div class="detail-value">
+
                                 ${esc(
                                     order.customer_name
                                 )}
+
                             </div>
 
                         </div>
@@ -885,9 +789,11 @@ function renderOrderCard(
                             </div>
 
                             <div class="detail-value">
+
                                 ${esc(
                                     order.customer_phone
                                 )}
+
                             </div>
 
                         </div>
@@ -900,9 +806,11 @@ function renderOrderCard(
                             </div>
 
                             <div class="detail-value">
+
                                 ${esc(
                                     order.pincode
                                 )}
+
                             </div>
 
                         </div>
@@ -915,11 +823,13 @@ function renderOrderCard(
                             </div>
 
                             <div class="detail-value">
+
                                 ${esc(
                                     formatDate(
                                         order.created_at
                                     )
                                 )}
+
                             </div>
 
                         </div>
@@ -937,7 +847,12 @@ function renderOrderCard(
                             Full Address
                         </div>
 
-                        <div class="detail-value full-address">
+                        <div
+                            class="
+                                detail-value
+                                full-address
+                            "
+                        >
 
                             ${esc(
                                 order.customer_address
@@ -950,7 +865,7 @@ function renderOrderCard(
                 </div>
 
 
-                <!-- PRODUCT -->
+                <!-- PRODUCT DETAILS -->
 
                 <div class="detail-section">
 
@@ -969,41 +884,11 @@ function renderOrderCard(
                             </div>
 
                             <div class="detail-value">
+
                                 ${esc(
                                     order.product_name
                                 )}
-                            </div>
 
-                        </div>
-
-
-                        <div class="detail-item">
-
-                            <div class="detail-label">
-                                Product ID
-                            </div>
-
-                            <div class="detail-value">
-                                ${esc(
-                                    order.product_id
-                                )}
-                            </div>
-
-                        </div>
-
-
-                        <div class="detail-item">
-
-                            <div class="detail-label">
-                                Base Price
-                            </div>
-
-                            <div class="detail-value">
-                                ₹${money(
-                                    order.base_price ??
-                                    order.price ??
-                                    0
-                                )}
                             </div>
 
                         </div>
@@ -1016,11 +901,13 @@ function renderOrderCard(
                             </div>
 
                             <div class="detail-value">
+
                                 ₹${money(
                                     order.final_price ??
                                     order.price ??
                                     0
                                 )}
+
                             </div>
 
                         </div>
@@ -1031,7 +918,7 @@ function renderOrderCard(
                 </div>
 
 
-                <!-- VARIANTS -->
+                <!-- SELECTED VARIANTS -->
 
                 <div class="detail-section">
 
@@ -1042,75 +929,11 @@ function renderOrderCard(
 
                     <div class="variant-list">
 
-                        ${renderVariants(
-                            order
-                        )}
+                        ${renderVariants(order)}
 
                     </div>
 
                 </div>
-
-
-                <!-- DESCRIPTION -->
-
-                ${
-                    order.product_description
-
-                        ? `
-
-                            <div class="detail-section">
-
-                                <h4>
-                                    Product Description
-                                </h4>
-
-                                <div class="product-description">
-
-                                    ${esc(
-                                        order.product_description
-                                    )}
-
-                                </div>
-
-                            </div>
-
-                          `
-
-                        : ""
-                }
-
-
-                <!-- LINK -->
-
-                ${
-                    order.product_link
-
-                        ? `
-
-                            <div class="detail-section">
-
-                                <h4>
-                                    Product Link
-                                </h4>
-
-                                <div class="detail-item">
-
-                                    <div class="detail-value">
-
-                                        ${esc(
-                                            order.product_link
-                                        )}
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                          `
-
-                        : ""
-                }
 
 
                 <!-- ACTIONS -->
@@ -1122,9 +945,7 @@ function renderOrderCard(
                         type="button"
                         class="edit-button"
                         data-action="edit"
-                        data-id="${esc(
-                            order.id
-                        )}"
+                        data-id="${esc(order.id)}"
                     >
 
                         ✏ Edit Order
@@ -1136,9 +957,7 @@ function renderOrderCard(
                         type="button"
                         class="delete-button"
                         data-action="delete"
-                        data-id="${esc(
-                            order.id
-                        )}"
+                        data-id="${esc(order.id)}"
                     >
 
                         🗑 Delete
@@ -1154,169 +973,155 @@ function renderOrderCard(
         </article>
 
     `;
-
 }
 
 
 /* =========================================================
-   RENDER VARIANTS
+   SELECTED VARIANTS
 ========================================================= */
 
-function renderVariants(
-    order
-) {
+function renderVariants(order) {
 
     const values = [];
 
 
-    const variants =
-        order.variants ||
-        {};
-
-
-    Object.keys(
-        variants
-    ).forEach(
-        key => {
-
-            const value =
-                variants[key];
-
-
-            if (
-                value &&
-                typeof value === "object"
-            ) {
-
-                const name =
-                    value.name ||
-                    value.value ||
-                    "";
-
-
-                if (name) {
-
-                    values.push(
-                        `<span class="variant-chip">
-                            ${esc(
-                                key
-                            )}: ${esc(
-                                name
-                            )}
-                        </span>`
-                    );
-
-                }
-
-            } else if (
-                value !== null &&
-                value !== undefined &&
-                String(value).trim()
-            ) {
-
-                values.push(
-                    `<span class="variant-chip">
-                        ${esc(
-                            key
-                        )}: ${esc(
-                            value
-                        )}
-                    </span>`
-                );
-
-            }
-
-        }
-    );
-
-
     const selections =
-        order.selections ||
-        {};
+        order.selections &&
+        typeof order.selections === "object"
+            ? order.selections
+            : {};
 
 
-    Object.keys(
-        selections
-    ).forEach(
-        key => {
-
-            const value =
-                selections[key];
+    const variants =
+        order.variants &&
+        typeof order.variants === "object"
+            ? order.variants
+            : {};
 
 
-            if (
-                value &&
-                typeof value === "object"
-            ) {
+    /*
+     * Use selections first because these
+     * represent the customer's actual choice.
+     */
 
-                const name =
-                    value.name ||
-                    value.value ||
-                    "";
+    const source =
+        Object.keys(selections).length
+            ? selections
+            : variants;
 
 
-                if (name) {
+    const renderedKeys =
+        new Set();
 
-                    values.push(
-                        `<span class="variant-chip">
-                            ${esc(
-                                key
-                            )}: ${esc(
-                                name
-                            )}
-                        </span>`
-                    );
 
-                }
+    Object.keys(source).forEach(key => {
 
-            } else if (
-                value !== null &&
-                value !== undefined &&
-                String(value).trim()
-            ) {
+        const rawValue =
+            source[key];
 
-                values.push(
-                    `<span class="variant-chip">
-                        ${esc(
-                            key
-                        )}: ${esc(
-                            value
-                        )}
-                    </span>`
-                );
 
-            }
+        const displayValue =
+            getVariantDisplayValue(
+                order,
+                key,
+                rawValue
+            );
 
+
+        if (!displayValue) {
+            return;
         }
-    );
 
+
+        const normalizedKey =
+            String(key)
+                .toLowerCase()
+                .trim();
+
+
+        /*
+         * Avoid duplicate Colour / Size.
+         */
+
+        if (
+            renderedKeys.has(
+                normalizedKey
+            )
+        ) {
+
+            return;
+        }
+
+
+        renderedKeys.add(
+            normalizedKey
+        );
+
+
+        values.push(`
+
+            <span class="variant-chip">
+
+                <strong>
+                    ${esc(
+                        cleanVariantLabel(key)
+                    )}
+                </strong>
+
+                : ${esc(displayValue)}
+
+            </span>
+
+        `);
+
+    });
+
+
+    /*
+     * Legacy orders.
+     */
 
     if (
+        !renderedKeys.has("colour") &&
+        !renderedKeys.has("color") &&
         order.colour
     ) {
 
-        values.push(
-            `<span class="variant-chip">
-                Colour: ${esc(
-                    order.colour
-                )}
-            </span>`
-        );
+        values.push(`
+
+            <span class="variant-chip">
+
+                <strong>
+                    Colour
+                </strong>
+
+                : ${esc(order.colour)}
+
+            </span>
+
+        `);
 
     }
 
 
     if (
+        !renderedKeys.has("size") &&
         order.size
     ) {
 
-        values.push(
-            `<span class="variant-chip">
-                Size: ${esc(
-                    order.size
-                )}
-            </span>`
-        );
+        values.push(`
+
+            <span class="variant-chip">
+
+                <strong>
+                    Size
+                </strong>
+
+                : ${esc(order.size)}
+
+            </span>
+
+        `);
 
     }
 
@@ -1324,24 +1129,305 @@ function renderVariants(
     if (!values.length) {
 
         return `
-            <span class="variant-chip">
-                No variants selected
-            </span>
-        `;
 
+            <span class="variant-chip">
+
+                No variants selected
+
+            </span>
+
+        `;
     }
 
 
     return values.join("");
-
 }
 
 
 /* =========================================================
-   EVENTS
+   CLEAN VARIANT LABEL
+========================================================= */
+
+function cleanVariantLabel(key) {
+
+    const map = {
+
+        colour: "Colour",
+        color: "Colour",
+        size: "Size",
+        thickness: "Thickness",
+        "font colour": "Font Colour",
+        "font color": "Font Colour"
+
+    };
+
+
+    const lower =
+        String(key)
+            .trim()
+            .toLowerCase();
+
+
+    if (map[lower]) {
+
+        return map[lower];
+
+    }
+
+
+    return String(key)
+        .replace(
+            /[_-]+/g,
+            " "
+        )
+        .replace(
+            /\b\w/g,
+            char =>
+                char.toUpperCase()
+        );
+}
+
+
+/* =========================================================
+   CHECK IF VALUE LOOKS LIKE UUID
+========================================================= */
+
+function looksLikeId(value) {
+
+    const text =
+        String(value || "")
+            .trim();
+
+
+    if (
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            .test(text)
+    ) {
+
+        return true;
+
+    }
+
+
+    if (
+        /^[0-9a-f]{24,}$/i.test(text)
+    ) {
+
+        return true;
+
+    }
+
+
+    return false;
+}
+
+
+/* =========================================================
+   GET READABLE VARIANT VALUE
+========================================================= */
+
+function getVariantDisplayValue(
+    order,
+    key,
+    rawValue
+) {
+
+    if (
+        rawValue &&
+        typeof rawValue === "object"
+    ) {
+
+        const direct =
+            rawValue.name ||
+            rawValue.label ||
+            rawValue.title ||
+            rawValue.value ||
+            "";
+
+
+        if (direct) {
+
+            return direct;
+
+        }
+
+
+        /*
+         * Try the ID against product data.
+         */
+
+        const id =
+            rawValue.id ||
+            rawValue.optionId ||
+            rawValue.valueId ||
+            rawValue.variantId ||
+            "";
+
+
+        if (id) {
+
+            const found =
+                findVariantLabel(
+                    order.product_data,
+                    id
+                );
+
+
+            if (found) {
+
+                return found;
+
+            }
+
+        }
+
+    }
+
+
+    const primitive =
+        String(
+            rawValue ?? ""
+        ).trim();
+
+
+    if (!primitive) {
+        return "";
+    }
+
+
+    const found =
+        findVariantLabel(
+            order.product_data,
+            primitive
+        );
+
+
+    if (found) {
+
+        return found;
+
+    }
+
+
+    if (
+        looksLikeId(primitive)
+    ) {
+
+        return "";
+
+    }
+
+
+    return primitive;
+}
+
+
+/* =========================================================
+   FIND VARIANT LABEL IN PRODUCT DATA
+========================================================= */
+
+function findVariantLabel(
+    object,
+    id
+) {
+
+    if (
+        !object ||
+        typeof object !== "object"
+    ) {
+
+        return "";
+
+    }
+
+
+    if (Array.isArray(object)) {
+
+        for (
+            const item of object
+        ) {
+
+            const result =
+                findVariantLabel(
+                    item,
+                    id
+                );
+
+
+            if (result) {
+
+                return result;
+
+            }
+
+        }
+
+
+        return "";
+    }
+
+
+    const possibleIds = [
+
+        object.id,
+        object.optionId,
+        object.valueId,
+        object.variantId
+
+    ];
+
+
+    if (
+        possibleIds.some(
+            value =>
+                String(value || "") ===
+                String(id)
+        )
+    ) {
+
+        return (
+            object.name ||
+            object.label ||
+            object.title ||
+            object.value ||
+            ""
+        );
+    }
+
+
+    for (
+        const key of Object.keys(object)
+    ) {
+
+        const result =
+            findVariantLabel(
+                object[key],
+                id
+            );
+
+
+        if (result) {
+
+            return result;
+
+        }
+
+    }
+
+
+    return "";
+}
+
+
+/* =========================================================
+   ORDER EVENTS
 ========================================================= */
 
 function bindOrderEvents() {
+
+    /*
+     * Expand / collapse
+     */
 
     document
         .querySelectorAll(
@@ -1403,6 +1489,10 @@ function bindOrderEvents() {
         );
 
 
+    /*
+     * Checkboxes
+     */
+
     document
         .querySelectorAll(
             ".order-checkbox"
@@ -1454,6 +1544,10 @@ function bindOrderEvents() {
         );
 
 
+    /*
+     * Edit
+     */
+
     document
         .querySelectorAll(
             '[data-action="edit"]'
@@ -1478,6 +1572,10 @@ function bindOrderEvents() {
             }
         );
 
+
+    /*
+     * Delete
+     */
 
     document
         .querySelectorAll(
@@ -1533,7 +1631,6 @@ function updateSelectionUI() {
             false;
 
         return;
-
     }
 
 
@@ -1555,7 +1652,6 @@ function updateSelectionUI() {
         visibleSelected > 0 &&
         visibleSelected <
             visible.length;
-
 }
 
 
@@ -1640,15 +1736,12 @@ document
                 );
 
                 return;
-
             }
 
 
-            await bulkUpdate(
-                {
-                    status
-                }
-            );
+            await bulkUpdate({
+                status
+            });
 
         }
     );
@@ -1678,16 +1771,13 @@ document
                 );
 
                 return;
-
             }
 
 
-            await bulkUpdate(
-                {
-                    payment_status:
-                        paymentStatus
-                }
-            );
+            await bulkUpdate({
+                payment_status:
+                    paymentStatus
+            });
 
         }
     );
@@ -1697,9 +1787,7 @@ document
    BULK UPDATE
 ========================================================= */
 
-async function bulkUpdate(
-    changes
-) {
+async function bulkUpdate(changes) {
 
     const ids =
         Array.from(
@@ -1715,7 +1803,6 @@ async function bulkUpdate(
         );
 
         return;
-
     }
 
 
@@ -1724,8 +1811,7 @@ async function bulkUpdate(
         await api(
             "/api/admin/orders/bulk",
             {
-                method:
-                    "POST",
+                method: "POST",
 
                 body:
                     JSON.stringify({
@@ -1746,9 +1832,7 @@ async function bulkUpdate(
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
 
         showToast(
@@ -1758,7 +1842,6 @@ async function bulkUpdate(
         );
 
     }
-
 }
 
 
@@ -1766,15 +1849,12 @@ async function bulkUpdate(
    EDIT MODAL
 ========================================================= */
 
-function openEditModal(
-    orderId
-) {
+function openEditModal(orderId) {
 
     const order =
         state.orders.find(
             item =>
-                item.id ===
-                orderId
+                item.id === orderId
         );
 
 
@@ -1802,58 +1882,31 @@ function openEditModal(
     document.getElementById(
         "editCustomerName"
     ).value =
-        order.customer_name ||
-        "";
+        order.customer_name || "";
 
 
     document.getElementById(
         "editCustomerPhone"
     ).value =
-        order.customer_phone ||
-        "";
+        order.customer_phone || "";
 
 
     document.getElementById(
         "editCustomerAddress"
     ).value =
-        order.customer_address ||
-        "";
+        order.customer_address || "";
 
 
     document.getElementById(
         "editPincode"
     ).value =
-        order.pincode ||
-        "";
+        order.pincode || "";
 
 
     document.getElementById(
         "editProductName"
     ).value =
-        order.product_name ||
-        "";
-
-
-    document.getElementById(
-        "editProductImage"
-    ).value =
-        order.image_url ||
-        order.product_image ||
-        "";
-
-
-    document.getElementById(
-        "editColour"
-    ).value =
-        order.colour ||
-        "";
-
-
-    document.getElementById(
-        "editSize"
-    ).value =
-        order.size ||
-        "";
+        order.product_name || "";
 
 
     document.getElementById(
@@ -1880,12 +1933,911 @@ function openEditModal(
         "pending";
 
 
+    /*
+     * Build variant editor
+     */
+
+    renderEditVariants(order);
+
+
     editModal.classList.remove(
         "hidden"
     );
-
 }
 
+
+/* =========================================================
+   RENDER EDIT VARIANTS
+========================================================= */
+
+function renderEditVariants(order) {
+
+    const container =
+        document.getElementById(
+            "editVariants"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    const groups =
+        extractVariantGroups(order);
+
+
+    const selected =
+        getSelectedVariantValues(order);
+
+
+    if (!groups.length) {
+
+        container.innerHTML = `
+
+            <div class="variant-edit-empty">
+
+                No variant options found
+                for this order.
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML =
+        groups
+            .map(
+                group => {
+
+                    const selectedValue =
+                        selected[group.key] ??
+                        findSelectedByLabel(
+                            selected,
+                            group.label
+                        ) ??
+                        "";
+
+
+                    return `
+
+                        <div
+                            class="edit-variant-group"
+                            data-variant-key="${esc(
+                                group.key
+                            )}"
+                        >
+
+                            <label>
+
+                                ${esc(
+                                    cleanVariantLabel(
+                                        group.label
+                                    )
+                                )}
+
+                            </label>
+
+
+                            <select
+                                class="
+                                    edit-variant-select
+                                "
+                                data-variant-key="${esc(
+                                    group.key
+                                )}"
+                            >
+
+                                <option value="">
+
+                                    Select
+                                    ${esc(
+                                        cleanVariantLabel(
+                                            group.label
+                                        )
+                                    )}
+
+                                </option>
+
+
+                                ${
+                                    group.options
+                                        .map(
+                                            option => {
+
+                                                const value =
+                                                    String(
+                                                        option.id ??
+                                                        option.value ??
+                                                        option.name ??
+                                                        ""
+                                                    );
+
+
+                                                const label =
+                                                    option.name ||
+                                                    option.label ||
+                                                    option.title ||
+                                                    option.value ||
+                                                    value;
+
+
+                                                const selectedMatch =
+                                                    String(
+                                                        selectedValue
+                                                    ) ===
+                                                    value ||
+
+                                                    String(
+                                                        selectedValue
+                                                    ) ===
+                                                    String(
+                                                        label
+                                                    );
+
+
+                                                return `
+
+                                                    <option
+                                                        value="${esc(
+                                                            value
+                                                        )}"
+                                                        data-label="${esc(
+                                                            label
+                                                        )}"
+                                                        ${
+                                                            selectedMatch
+                                                                ? "selected"
+                                                                : ""
+                                                        }
+                                                    >
+
+                                                        ${esc(
+                                                            label
+                                                        )}
+
+                                                    </option>
+
+                                                `;
+
+                                            }
+                                        )
+                                        .join("")
+                                }
+
+                            </select>
+
+                        </div>
+
+                    `;
+
+                }
+            )
+            .join("");
+}
+
+
+/* =========================================================
+   FIND SELECTED BY LABEL
+========================================================= */
+
+function findSelectedByLabel(
+    selected,
+    label
+) {
+
+    const target =
+        String(label || "")
+            .toLowerCase()
+            .trim();
+
+
+    for (
+        const key of Object.keys(selected)
+    ) {
+
+        if (
+            String(key)
+                .toLowerCase()
+                .trim() ===
+            target
+        ) {
+
+            return selected[key];
+
+        }
+
+    }
+
+
+    return "";
+}
+
+
+/* =========================================================
+   EXTRACT VARIANT GROUPS
+========================================================= */
+
+function extractVariantGroups(order) {
+
+    const groups = [];
+
+
+    const data =
+        order.product_data &&
+        typeof order.product_data === "object"
+            ? order.product_data
+            : {};
+
+
+    const sources = [
+
+        data.variants,
+        data.variantGroups,
+        data.variant_groups,
+        data.options,
+        data.variantOptions
+
+    ];
+
+
+    for (
+        const source of sources
+    ) {
+
+        if (!source) {
+            continue;
+        }
+
+
+        if (Array.isArray(source)) {
+
+            source.forEach(
+                group => {
+
+                    const parsed =
+                        normalizeVariantGroup(
+                            group
+                        );
+
+
+                    if (parsed) {
+
+                        groups.push(
+                            parsed
+                        );
+
+                    }
+
+                }
+            );
+
+        } else if (
+            typeof source === "object"
+        ) {
+
+            Object.keys(source)
+                .forEach(
+                    key => {
+
+                        const parsed =
+                            normalizeVariantGroup(
+                                source[key],
+                                key
+                            );
+
+
+                        if (parsed) {
+
+                            groups.push(
+                                parsed
+                            );
+
+                        }
+
+                    }
+                );
+        }
+
+
+        if (groups.length) {
+            break;
+        }
+
+    }
+
+
+    /*
+     * If product_data does not contain
+     * variant groups, try the actual
+     * variants object.
+     */
+
+    if (!groups.length) {
+
+        const variants =
+            order.variants &&
+            typeof order.variants === "object"
+                ? order.variants
+                : {};
+
+
+        Object.keys(variants)
+            .forEach(
+                key => {
+
+                    const parsed =
+                        normalizeVariantGroup(
+                            variants[key],
+                            key
+                        );
+
+
+                    if (parsed) {
+
+                        groups.push(
+                            parsed
+                        );
+
+                    }
+
+                }
+            );
+
+    }
+
+
+    /*
+     * Remove duplicates.
+     */
+
+    const unique =
+        new Map();
+
+
+    groups.forEach(
+        group => {
+
+            const key =
+                String(group.key)
+                    .toLowerCase();
+
+
+            if (
+                !unique.has(key)
+            ) {
+
+                unique.set(
+                    key,
+                    group
+                );
+
+            }
+
+        }
+    );
+
+
+    return Array.from(
+        unique.values()
+    );
+}
+
+
+/* =========================================================
+   NORMALIZE VARIANT GROUP
+========================================================= */
+
+function normalizeVariantGroup(
+    group,
+    fallbackKey = ""
+) {
+
+    if (!group) {
+        return null;
+    }
+
+
+    let key =
+        fallbackKey;
+
+
+    let label =
+        fallbackKey;
+
+
+    let options =
+        [];
+
+
+    /*
+     * Group itself is an array
+     */
+
+    if (
+        Array.isArray(group)
+    ) {
+
+        options =
+            group;
+
+    }
+
+    /*
+     * Group is an object
+     */
+
+    else if (
+        typeof group === "object"
+    ) {
+
+        key =
+            group.key ||
+            group.id ||
+            group.name ||
+            group.title ||
+            fallbackKey;
+
+
+        label =
+            group.label ||
+            group.name ||
+            group.title ||
+            key;
+
+
+        if (
+            Array.isArray(
+                group.options
+            )
+        ) {
+
+            options =
+                group.options;
+
+        }
+
+        else if (
+            Array.isArray(
+                group.values
+            )
+        ) {
+
+            options =
+                group.values;
+
+        }
+
+        else if (
+            Array.isArray(
+                group.items
+            )
+        ) {
+
+            options =
+                group.items;
+
+        }
+
+    }
+
+
+    /*
+     * Some systems store options
+     * directly as an object.
+     */
+
+    if (
+        !options.length &&
+        group &&
+        typeof group === "object" &&
+        !Array.isArray(group)
+    ) {
+
+        const possible =
+            Object.keys(group)
+                .filter(
+                    key =>
+                        ![
+                            "id",
+                            "key",
+                            "name",
+                            "label",
+                            "title"
+                        ].includes(
+                            key
+                        )
+                );
+
+
+        if (possible.length) {
+
+            const values =
+                possible.map(
+                    key => {
+
+                        const item =
+                            group[key];
+
+
+                        if (
+                            item &&
+                            typeof item === "object"
+                        ) {
+
+                            return {
+                                id:
+                                    item.id ??
+                                    key,
+
+                                name:
+                                    item.name ??
+                                    item.label ??
+                                    item.title ??
+                                    item.value ??
+                                    key,
+
+                                value:
+                                    item.value ??
+                                    item.name ??
+                                    key
+                            };
+
+                        }
+
+
+                        return {
+
+                            id: key,
+
+                            name:
+                                String(
+                                    item
+                                ),
+
+                            value:
+                                String(
+                                    item
+                                )
+
+                        };
+
+                    }
+                );
+
+
+            options =
+                values;
+
+        }
+
+    }
+
+
+    if (!options.length) {
+        return null;
+    }
+
+
+    return {
+
+        key:
+            String(
+                key ||
+                fallbackKey
+            ),
+
+        label:
+            String(
+                label ||
+                key ||
+                fallbackKey
+            ),
+
+        options:
+            options
+                .map(
+                    option => {
+
+                        if (
+                            typeof option === "string" ||
+                            typeof option === "number"
+                        ) {
+
+                            return {
+
+                                id:
+                                    String(option),
+
+                                value:
+                                    String(option),
+
+                                name:
+                                    String(option)
+
+                            };
+
+                        }
+
+
+                        return option;
+
+                    }
+                )
+                .filter(Boolean)
+
+    };
+}
+
+
+/* =========================================================
+   GET SELECTED VARIANT VALUES
+========================================================= */
+
+function getSelectedVariantValues(order) {
+
+    const result = {};
+
+
+    const selections =
+        order.selections &&
+        typeof order.selections === "object"
+            ? order.selections
+            : {};
+
+
+    const variants =
+        order.variants &&
+        typeof order.variants === "object"
+            ? order.variants
+            : {};
+
+
+    /*
+     * Customer selections first.
+     */
+
+    Object.keys(selections)
+        .forEach(
+            key => {
+
+                const value =
+                    selections[key];
+
+
+                if (
+                    value &&
+                    typeof value === "object"
+                ) {
+
+                    result[key] =
+                        value.id ??
+                        value.value ??
+                        value.name ??
+                        value.label ??
+                        "";
+
+                } else {
+
+                    result[key] =
+                        value;
+
+                }
+
+            }
+        );
+
+
+    /*
+     * Fill missing values from variants.
+     */
+
+    Object.keys(variants)
+        .forEach(
+            key => {
+
+                if (
+                    result[key] !== undefined
+                ) {
+
+                    return;
+
+                }
+
+
+                const value =
+                    variants[key];
+
+
+                if (
+                    value &&
+                    typeof value === "object"
+                ) {
+
+                    result[key] =
+                        value.id ??
+                        value.value ??
+                        value.name ??
+                        value.label ??
+                        "";
+
+                } else {
+
+                    result[key] =
+                        value;
+
+                }
+
+            }
+        );
+
+
+    /*
+     * Legacy fields.
+     */
+
+    if (
+        result.Colour === undefined &&
+        order.colour
+    ) {
+
+        result.Colour =
+            order.colour;
+
+    }
+
+
+    if (
+        result.Size === undefined &&
+        order.size
+    ) {
+
+        result.Size =
+            order.size;
+
+    }
+
+
+    return result;
+}
+
+
+/* =========================================================
+   COLLECT EDITED VARIANTS
+========================================================= */
+
+function collectEditedVariants(order) {
+
+    const variants = {};
+    const selections = {};
+
+
+    document
+        .querySelectorAll(
+            ".edit-variant-select"
+        )
+        .forEach(
+            select => {
+
+                const key =
+                    select.dataset.variantKey;
+
+
+                const option =
+                    select.options[
+                        select.selectedIndex
+                    ];
+
+
+                if (
+                    !key ||
+                    !option
+                ) {
+
+                    return;
+
+                }
+
+
+                const value =
+                    option.value;
+
+
+                if (!value) {
+                    return;
+                }
+
+
+                const label =
+                    option.dataset.label ||
+                    option.textContent.trim();
+
+
+                selections[key] = {
+
+                    id: value,
+
+                    name: label,
+
+                    value: label
+
+                };
+
+
+                variants[key] = {
+
+                    id: value,
+
+                    name: label,
+
+                    value: label
+
+                };
+
+            }
+        );
+
+
+    let colour = "";
+    let size = "";
+
+
+    Object.keys(selections)
+        .forEach(
+            key => {
+
+                const lower =
+                    key.toLowerCase();
+
+
+                const value =
+                    selections[key];
+
+
+                if (
+                    lower === "colour" ||
+                    lower === "color"
+                ) {
+
+                    colour =
+                        value.name || "";
+
+                }
+
+
+                if (
+                    lower === "size"
+                ) {
+
+                    size =
+                        value.name || "";
+
+                }
+
+            }
+        );
+
+
+    return {
+
+        variants,
+
+        selections,
+
+        colour,
+
+        size
+
+    };
+}
+
+
+/* =========================================================
+   CLOSE EDIT MODAL
+========================================================= */
 
 function closeEditModal() {
 
@@ -1893,9 +2845,9 @@ function closeEditModal() {
         "hidden"
     );
 
+
     state.editingId =
         null;
-
 }
 
 
@@ -1919,14 +2871,20 @@ document
     );
 
 
-document
-    .querySelector(
+const modalBackdrop =
+    document.querySelector(
         ".modal-backdrop"
-    )
-    .addEventListener(
+    );
+
+
+if (modalBackdrop) {
+
+    modalBackdrop.addEventListener(
         "click",
         closeEditModal
     );
+
+}
 
 
 /* =========================================================
@@ -1949,76 +2907,123 @@ editForm.addEventListener(
         }
 
 
+        const order =
+            state.orders.find(
+                item =>
+                    item.id === id
+            );
+
+
+        if (!order) {
+            return;
+        }
+
+
+        const variantData =
+            collectEditedVariants(
+                order
+            );
+
+
         const payload = {
 
             customer_name:
-                document.getElementById(
-                    "editCustomerName"
-                ).value.trim(),
+                document
+                    .getElementById(
+                        "editCustomerName"
+                    )
+                    .value
+                    .trim(),
+
 
             customer_phone:
-                document.getElementById(
-                    "editCustomerPhone"
-                ).value.trim(),
+                document
+                    .getElementById(
+                        "editCustomerPhone"
+                    )
+                    .value
+                    .trim(),
+
 
             customer_address:
-                document.getElementById(
-                    "editCustomerAddress"
-                ).value.trim(),
+                document
+                    .getElementById(
+                        "editCustomerAddress"
+                    )
+                    .value
+                    .trim(),
+
 
             pincode:
-                document.getElementById(
-                    "editPincode"
-                ).value.trim(),
+                document
+                    .getElementById(
+                        "editPincode"
+                    )
+                    .value
+                    .trim(),
+
 
             product_name:
-                document.getElementById(
-                    "editProductName"
-                ).value.trim(),
+                document
+                    .getElementById(
+                        "editProductName"
+                    )
+                    .value
+                    .trim(),
 
-            product_image:
-                document.getElementById(
-                    "editProductImage"
-                ).value.trim(),
-
-            image_url:
-                document.getElementById(
-                    "editProductImage"
-                ).value.trim(),
-
-            colour:
-                document.getElementById(
-                    "editColour"
-                ).value.trim(),
-
-            size:
-                document.getElementById(
-                    "editSize"
-                ).value.trim(),
 
             final_price:
                 Number(
-                    document.getElementById(
-                        "editFinalPrice"
-                    ).value || 0
+                    document
+                        .getElementById(
+                            "editFinalPrice"
+                        )
+                        .value ||
+                    0
                 ),
+
 
             price:
                 Number(
-                    document.getElementById(
-                        "editFinalPrice"
-                    ).value || 0
+                    document
+                        .getElementById(
+                            "editFinalPrice"
+                        )
+                        .value ||
+                    0
                 ),
 
+
             status:
-                document.getElementById(
-                    "editOrderStatus"
-                ).value,
+                document
+                    .getElementById(
+                        "editOrderStatus"
+                    )
+                    .value,
+
 
             payment_status:
-                document.getElementById(
-                    "editPaymentStatus"
-                ).value
+                document
+                    .getElementById(
+                        "editPaymentStatus"
+                    )
+                    .value,
+
+
+            variants:
+                variantData.variants,
+
+
+            selections:
+                variantData.selections,
+
+
+            colour:
+                variantData.colour,
+
+
+            size:
+                variantData.size
 
         };
 
@@ -2030,8 +3035,7 @@ editForm.addEventListener(
                     id
                 )}`,
                 {
-                    method:
-                        "PUT",
+                    method: "PUT",
 
                     body:
                         JSON.stringify(
@@ -2054,9 +3058,7 @@ editForm.addEventListener(
 
         } catch (error) {
 
-            console.error(
-                error
-            );
+            console.error(error);
 
 
             showToast(
@@ -2082,8 +3084,7 @@ async function deleteOrder(
     const order =
         state.orders.find(
             item =>
-                item.id ===
-                orderId
+                item.id === orderId
         );
 
 
@@ -2110,8 +3111,7 @@ async function deleteOrder(
                 orderId
             )}`,
             {
-                method:
-                    "DELETE"
+                method: "DELETE"
             }
         );
 
@@ -2136,9 +3136,7 @@ async function deleteOrder(
 
     } catch (error) {
 
-        console.error(
-            error
-        );
+        console.error(error);
 
 
         showToast(
@@ -2148,7 +3146,6 @@ async function deleteOrder(
         );
 
     }
-
 }
 
 
