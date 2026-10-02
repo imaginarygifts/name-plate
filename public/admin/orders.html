@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 
-<meta charset="UTF-8">
+    <meta charset="UTF-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>Orders - Imaginary Gifts</title>
+    <title>Orders - Imaginary Gifts</title>
 
-<link
-    rel="stylesheet"
-    href="/admin/orders.css"
->
+    <link
+        rel="stylesheet"
+        href="/admin/orders.css"
+    >
 
 </head>
 
+
 <body>
+
+
+<!-- =====================================================
+     HEADER
+====================================================== -->
 
 <header class="orders-header">
 
@@ -32,14 +39,21 @@
             ←
         </button>
 
+
         <div>
-            <h1>Orders</h1>
+
+            <h1>
+                Orders
+            </h1>
+
             <p id="orderCount">
                 Loading orders...
             </p>
+
         </div>
 
     </div>
+
 
     <button
         type="button"
@@ -52,35 +66,48 @@
 </header>
 
 
+
 <main class="orders-page">
 
 
-    <!-- =========================================
-         FILTERS
-    ========================================== -->
+    <!-- =================================================
+         FILTERS + BULK MANAGEMENT
+    ================================================== -->
 
     <section class="control-card">
+
 
         <div class="control-title">
 
             <div>
-                <h2>Order Management</h2>
+
+                <h2>
+                    Order Management
+                </h2>
 
                 <p>
                     Manage orders and payments
                 </p>
+
             </div>
 
         </div>
 
 
+
+        <!-- =============================================
+             FILTERS
+        ============================================== -->
+
         <div class="filter-grid">
+
 
             <div class="filter-field">
 
                 <label for="orderFilter">
                     Order Status
                 </label>
+
 
                 <select id="orderFilter">
 
@@ -117,11 +144,13 @@
             </div>
 
 
+
             <div class="filter-field">
 
                 <label for="paymentFilter">
                     Payment Status
                 </label>
+
 
                 <select id="paymentFilter">
 
@@ -145,16 +174,20 @@
 
             </div>
 
+
         </div>
 
 
-        <!-- =====================================
+
+        <!-- =============================================
              BULK CONTROLS
-        ====================================== -->
+        ============================================== -->
 
         <div class="bulk-section">
 
+
             <div class="bulk-row">
+
 
                 <label class="select-all-label">
 
@@ -177,10 +210,15 @@
                     0 selected
                 </span>
 
+
             </div>
 
 
+
             <div class="bulk-grid">
+
+
+                <!-- ORDER STATUS -->
 
                 <div class="bulk-field">
 
@@ -216,6 +254,7 @@
 
                     </select>
 
+
                     <button
                         type="button"
                         id="applyOrderStatus"
@@ -226,6 +265,9 @@
 
                 </div>
 
+
+
+                <!-- PAYMENT STATUS -->
 
                 <div class="bulk-field">
 
@@ -249,6 +291,7 @@
 
                     </select>
 
+
                     <button
                         type="button"
                         id="applyPaymentStatus"
@@ -259,18 +302,24 @@
 
                 </div>
 
+
             </div>
 
         </div>
 
+
     </section>
 
 
-    <!-- =========================================
-         ORDERS
-    ========================================== -->
 
-    <section id="ordersList" class="orders-list">
+    <!-- =================================================
+         ORDERS LIST
+    ================================================== -->
+
+    <section
+        id="ordersList"
+        class="orders-list"
+    >
 
         <div class="loading-box">
 
@@ -288,31 +337,43 @@
 </main>
 
 
-<!-- =========================================
+
+<!-- =====================================================
      EDIT ORDER MODAL
-========================================== -->
+====================================================== -->
 
 <div
     id="editModal"
     class="modal hidden"
 >
 
+
     <div class="modal-backdrop"></div>
+
 
 
     <div class="modal-box">
 
+
+        <!-- =============================================
+             MODAL HEADER
+        ============================================== -->
+
         <div class="modal-header">
+
 
             <div>
 
-                <h2>Edit Order</h2>
+                <h2>
+                    Edit Order
+                </h2>
 
                 <p id="editOrderId">
                     Order
                 </p>
 
             </div>
+
 
             <button
                 type="button"
@@ -322,10 +383,13 @@
                 ×
             </button>
 
+
         </div>
 
 
+
         <form id="editForm">
+
 
             <input
                 type="hidden"
@@ -333,44 +397,55 @@
             >
 
 
-            <!-- CUSTOMER -->
+
+            <!-- =========================================
+                 CUSTOMER DETAILS
+            ========================================== -->
 
             <div class="edit-section">
 
-                <h3>Customer Details</h3>
+
+                <h3>
+                    Customer Details
+                </h3>
+
 
 
                 <div class="form-field">
 
-                    <label>
+                    <label for="editCustomerName">
                         Name
                     </label>
 
                     <input
                         id="editCustomerName"
+                        type="text"
                         required
                     >
 
                 </div>
 
 
+
                 <div class="form-field">
 
-                    <label>
+                    <label for="editCustomerPhone">
                         Phone
                     </label>
 
                     <input
                         id="editCustomerPhone"
+                        type="tel"
                         required
                     >
 
                 </div>
 
 
+
                 <div class="form-field">
 
-                    <label>
+                    <label for="editCustomerAddress">
                         Address
                     </label>
 
@@ -383,85 +458,98 @@
                 </div>
 
 
+
                 <div class="form-field">
 
-                    <label>
+                    <label for="editPincode">
                         Pincode
                     </label>
 
                     <input
                         id="editPincode"
+                        type="text"
+                        inputmode="numeric"
                         required
                     >
 
                 </div>
 
+
             </div>
 
 
-            <!-- PRODUCT -->
+
+            <!-- =========================================
+                 PRODUCT DETAILS
+            ========================================== -->
 
             <div class="edit-section">
 
-                <h3>Product Details</h3>
 
+                <h3>
+                    Product Details
+                </h3>
+
+
+
+                <!-- PRODUCT NAME -->
 
                 <div class="form-field">
 
-                    <label>
+                    <label for="editProductName">
                         Product Name
                     </label>
 
                     <input
                         id="editProductName"
+                        type="text"
                         required
                     >
 
                 </div>
 
 
+
+                <!-- =====================================
+                     PRODUCT VARIANTS
+                ====================================== -->
+
                 <div class="form-field">
 
+
                     <label>
-                        Product Image URL
+                        Product Variants
                     </label>
 
-                    <input
-                        id="editProductImage"
+
+                    <div
+                        id="editVariants"
+                        class="edit-variants"
                     >
+
+                        <!--
+                            JavaScript dynamically creates
+                            all variant dropdowns here.
+                        -->
+
+                        <div class="variant-edit-empty">
+
+                            Loading variants...
+
+                        </div>
+
+                    </div>
+
 
                 </div>
 
 
-                <div class="form-field">
 
-                    <label>
-                        Colour
-                    </label>
-
-                    <input
-                        id="editColour"
-                    >
-
-                </div>
-
+                <!-- FINAL PRICE -->
 
                 <div class="form-field">
 
-                    <label>
-                        Size
-                    </label>
-
-                    <input
-                        id="editSize"
-                    >
-
-                </div>
-
-
-                <div class="form-field">
-
-                    <label>
+                    <label for="editFinalPrice">
                         Final Price
                     </label>
 
@@ -474,23 +562,36 @@
 
                 </div>
 
+
             </div>
 
 
-            <!-- STATUS -->
+
+            <!-- =========================================
+                 STATUS
+            ========================================== -->
 
             <div class="edit-section">
 
-                <h3>Status</h3>
 
+                <h3>
+                    Status
+                </h3>
+
+
+
+                <!-- ORDER STATUS -->
 
                 <div class="form-field">
 
-                    <label>
+                    <label for="editOrderStatus">
                         Order Status
                     </label>
 
-                    <select id="editOrderStatus">
+
+                    <select
+                        id="editOrderStatus"
+                    >
 
                         <option value="pending">
                             Pending
@@ -521,13 +622,19 @@
                 </div>
 
 
+
+                <!-- PAYMENT STATUS -->
+
                 <div class="form-field">
 
-                    <label>
+                    <label for="editPaymentStatus">
                         Payment Status
                     </label>
 
-                    <select id="editPaymentStatus">
+
+                    <select
+                        id="editPaymentStatus"
+                    >
 
                         <option value="pending">
                             Pending
@@ -545,10 +652,17 @@
 
                 </div>
 
+
             </div>
 
 
+
+            <!-- =========================================
+                 MODAL ACTIONS
+            ========================================== -->
+
             <div class="modal-actions">
+
 
                 <button
                     type="button"
@@ -558,6 +672,7 @@
                     Cancel
                 </button>
 
+
                 <button
                     type="submit"
                     class="gradient-button"
@@ -565,14 +680,22 @@
                     Save Changes
                 </button>
 
+
             </div>
 
+
         </form>
+
 
     </div>
 
 </div>
 
+
+
+<!-- =====================================================
+     TOAST
+====================================================== -->
 
 <div
     id="toast"
@@ -580,7 +703,13 @@
 ></div>
 
 
+
+<!-- =====================================================
+     JAVASCRIPT
+====================================================== -->
+
 <script src="/admin/orders.js"></script>
+
 
 </body>
 </html>
